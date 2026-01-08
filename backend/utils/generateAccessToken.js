@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 export default function generateAccessToken (user) {
     return jwt.sign(
         {
-            userId : user._id,
+            userId: user.userId ,
             email: user.email,
             role: user.role
         },
