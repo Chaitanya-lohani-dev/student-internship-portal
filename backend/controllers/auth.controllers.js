@@ -1,12 +1,12 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import {z} from 'zod';
-import User from '../models/user';
-import generateAccessToken from '../utils/generateAccessToken';
-import generateRefreshToken from '../utils/generateRefreshToken';
-import hashToken from '../utils/hashToken';
+import User from '../models/user.js';
+import generateAccessToken from '../utils/generateAccessToken.js';
+import generateRefreshToken from '../utils/generateRefreshToken.js';
+import hashToken from '../utils/hashToken.js';
 
-const secureOptions = {secure: process.env.NODE_ENV ==='production', httpOnly: true, sameSite: 'strict'}
+const secureOptions = {secure: process.env.NODE_ENV ==='production', httpOnly: false,  sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax'}
 
 const registerSchema = z.object({
     name: z.string().min(3),
@@ -106,41 +106,53 @@ export const logout = async (req, res) => {
 }
 
 export const refresh = async (req, res) => {
-    try {
-        const userRefreshToken = req.cookies.refreshToken;
-        if (!userRefreshToken) {
-            return res.status(401).json({ message: "Unauthorized" });
-        }
-        
-        const decoded = jwt.verify(userRefreshToken, process.env.REFRESH_TOKEN_SECRET)
-        
-        const { userId } = decoded;
-        const user = await User.findById(userId)
-    
-        if (!user) {
-            return res.status(401).json({message: 'unauthorized'})
-        }
-        const hashedUserRefreshToken = await hashToken(userRefreshToken)
-        if ( hashedUserRefreshToken !== user.refreshToken) {
-            await User.findByIdAndUpdate({_id: userId}, {refreshToken: undefined})
-            return res.status(401).clearCookie('refreshToken', secureOptions).json({message: "Unauthorized"})
-        }
-    
-        const accessToken = generateAccessToken(user)
-        const refreshToken = generateRefreshToken(user._id)
-    
-        const hashedRefreshToken = await hashToken(refreshToken)
-    
-        await User.findByIdAndUpdate(
-            userId,
-            {refreshToken: hashedRefreshToken},
-            {new: true}
-        )
-    
-        res.status(200)
-        .cookie('refreshToken', refreshToken, secureOptions)
-        .json({'accessToken': accessToken})
-    } catch (error) {
-        res.status(500).json({message: 'Internal Server error'})
+  try {
+    const userRefreshToken = req.cookies.refreshToken;
+    console.log("Cookies received:", req.cookies);
+
+    if (!userRefreshToken) {
+      return res.status(401).json({ message: "Unauthorized" });
     }
-}
+
+    const decoded = jwt.verify(
+      userRefreshToken,
+      process.env.REFRESH_TOKEN_SECRET
+    );
+
+    const user = await User.findById( decoded.userId);
+    console.log(user)
+    if (!user || !user.refreshToken) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const hashedIncomingToken = await hashToken(userRefreshToken);
+
+    if (hashedIncomingToken !== user.refreshToken) {
+      await User.findByIdAndUpdate(decoded.userId, { refreshToken: undefined });
+
+      return res
+        .status(401)
+        .clearCookie("refreshToken", {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "strict"
+        })
+        .json({ message: "Unauthorized" });
+    }
+
+    const newAccessToken = generateAccessToken(user);
+    const newRefreshToken = generateRefreshToken(user._id);
+    const hashedNewRefreshToken = await hashToken(newRefreshToken);
+
+    await User.findByIdAndUpdate(user._id, {
+      refreshToken: hashedNewRefreshToken
+    });
+
+    res
+      .cookie("refreshToken", newRefreshToken, secureOptions)
+      .json({ accessToken: newAccessToken });
+
+  } catch (error) {
+    return res.status(401).json({ message: "Invalid or expired refresh token" });
+  }
+};
