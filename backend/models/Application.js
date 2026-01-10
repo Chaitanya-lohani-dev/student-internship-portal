@@ -16,7 +16,7 @@ const applicationSchema = new mongoose.Schema({
     appliedAt: {
         type: Date,
         required: true,
-        default: Date.now
+        default: Date.now()
     },
     status: {
         type: String,

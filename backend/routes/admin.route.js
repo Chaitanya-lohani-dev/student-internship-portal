@@ -8,7 +8,7 @@ const router = express.Router();
 router.post('/jobs',authMiddleware, adminMiddleware, createJob)
 router.put('/jobs/:id',authMiddleware, adminMiddleware, updateJob)
 router.get('/jobs',authMiddleware, adminMiddleware, getJobs)
-router.get('/applications',authMiddleware, adminMiddleware, getApplications)
-router.patch('/applications/:id/status',authMiddleware, adminMiddleware, updateApplications)
+router.get('/applications/:id',authMiddleware, adminMiddleware, getApplications)
+router.patch('/applications/:id',authMiddleware, adminMiddleware, updateApplications)
 
 export default router
