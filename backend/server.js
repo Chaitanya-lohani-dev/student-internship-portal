@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import cookieParser from "cookie-parser";
 import authRoutes from "./routes/auth.route.js";
 import adminRoutes from './routes/admin.route.js';
+import studentRoutes from './routes/student.route.js'
 
 dotenv.config()
 connectDB();
@@ -16,6 +17,7 @@ app.use(cookieParser())
 app.use(express.json());
 app.use('/api/auth', authRoutes)
 app.use('/api/admin', adminRoutes)
+app.use('/api/student', studentRoutes)
 
 app.get("/health", (_, res) => {
     res.status(200).json({message: 'all Systems normal'})
