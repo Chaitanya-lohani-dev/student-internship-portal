@@ -108,7 +108,6 @@ export const logout = async (req, res) => {
 export const refresh = async (req, res) => {
   try {
     const userRefreshToken = req.cookies.refreshToken;
-    console.log("Cookies received:", req.cookies);
 
     if (!userRefreshToken) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -120,7 +119,7 @@ export const refresh = async (req, res) => {
     );
 
     const user = await User.findById( decoded.userId);
-    console.log(user)
+    
     if (!user || !user.refreshToken) {
       return res.status(401).json({ message: "Unauthorized" });
     }
