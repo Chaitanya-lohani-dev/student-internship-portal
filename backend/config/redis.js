@@ -6,5 +6,6 @@ client.on("error", err => {
     process.exit(1);
 });
 await client.connect();
+console.log("Redis connected successfully");
 
 export default client;
