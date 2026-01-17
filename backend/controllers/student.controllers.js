@@ -1,6 +1,7 @@
 import Application from "../models/application.js";
 import Job from "../models/job.js";
 import { z } from 'zod';
+import client from "../config/redis.js";
 
 const submitApplicationSchema = z.object({
     resume: z.string().url()
@@ -8,7 +9,14 @@ const submitApplicationSchema = z.object({
 
 export const getJobs = async(req,res) => {
     try {
-        const jobs = await Job.find({ closesAt: { $gt: new Date()}}).sort({createdAt: -1})
+        let jobs = await client.get('student:jobs');
+
+        if (jobs !== null) {
+            return res.status(200).json({jobs: JSON.parse(jobs)});
+        }
+
+        jobs = await Job.find({ closesAt: { $gt: new Date()}}).sort({createdAt: -1})
+        await client.set('student:jobs', JSON.stringify(jobs), { EX: 3600})
         res.status(200).json({jobs})
     } catch (error) {
         res.status(500).json({message: "Error fetching data"})
@@ -33,7 +41,7 @@ export const submitApplication = async (req, res) => {
             jobId: req.params.id,
             resume: validation.data.resume
         })
-    
+        await client.del("admin:applications");
         res.status(201).json({message: "Application Submitted Succesfully"})
     } catch (error) {
         res.status(500).json({message: "Error Submitting Application"})
@@ -42,7 +50,14 @@ export const submitApplication = async (req, res) => {
 
 export const getApplications = async(req, res) => {
     try {
-        const applications = await Application.find({userId: req.user.userId})
+        let applications = await client.get(`students:applications:${req.user.userId}`);
+
+        if (applications !== null) {
+            return res.status(200).json({applications: JSON.parse(applications)})
+        }
+
+        applications = await Application.find({userId: req.user.userId})
+        await client.set(`students:applications:${req.user.userId}`, JSON.stringify(applications), {EX: 900})
         res.status(200).json({data: applications})
     } catch (error) {
         res.status(500).json({message: "error geting data", error: error})
@@ -58,7 +73,7 @@ export const delApplication = async(req, res) => {
         }
     
         await Application.findOneAndDelete({_id: application._id})
-    
+        await client.del(`students:applications:${req.user.userId}`)
         res.status(200).json({message: "Application Deleted Successfully"})
     } catch (error) {
         res.status(500).json({message: "Error Deleting Application"})
