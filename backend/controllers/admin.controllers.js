@@ -1,6 +1,7 @@
 import Application from '../models/application.js';
 import Job from '../models/job.js';
 import { z } from 'zod';
+import client from '../config/redis.js';
 
 const createJobSchema = z.object({
     title: z.string().min(10),
@@ -34,7 +35,8 @@ export const createJob = async(req, res) => {
             closesAt,
             createdBy: req.user.userId
         })
-    
+        await client.del("students:jobs")
+        await client.del(`admin:jobs:${req.user.userId}`)
         res.status(201).json({message: 'Job Created Successfully'})
     } catch (error) {
         res.status(500).json({message: 'Internal Server error'})
@@ -59,10 +61,11 @@ export const updateJob = async(req, res) => {
             update,
             {new: true}
         )
-    
         if (!job){
             return res.status(404).json({message: 'Invalid Job or Unauthorized'})
         }
+        await client.del("students:jobs")
+        await client.del(`admin:jobs:${req.user.userId}`)
     
         res.status(200).json(job)
     } catch (error) {
@@ -72,7 +75,13 @@ export const updateJob = async(req, res) => {
 
 export const getJobs = async(req, res) => {
     try {
-        const data = await Job.find({createdBy: req.user.userId}).sort({createdAt: -1})
+        let data = await client.get(`admin:jobs:${req.user.userId}`);
+        if (data !== null) {
+            return res.status(200).json({data: JSON.parse(data)})
+        }
+
+        data = await Job.find({createdBy: req.user.userId}).sort({createdAt: -1})
+        await client.set(`admin:jobs:${req.user.userId}`, JSON.stringify(data), { EX: 3600})
         res.status(200).json({data: data})
     } catch (error) {
         res.status(500).json({message: 'Database error fetching data.'})
@@ -86,8 +95,14 @@ export const getApplications = async(req, res) => {
         if (!job || job.createdBy.toString() !== req.user.userId) {
             return res.status(403).json({message: 'Forbidden or Unauthorized'})
         }
+        
+        let applications = await client.get(`admin:applications:${req.params.id}`);
+        if (applications !== null) {
+            return res.status(200).json({data: JSON.parse(applications)})
+        }
 
-        const applications = await Application.find({jobId: req.params.id}).sort({appliedAt: -1})
+        applications = await Application.find({jobId: req.params.id}).sort({appliedAt: -1})
+        await client.set(`admin:applications:${req.params.id}`, JSON.stringify(applications), { EX: 900})
         res.status(200).json({data: applications})
     } catch (error) {
         res.status(500).json({message: "Error fetching data"})
@@ -126,7 +141,7 @@ export const updateApplications = async(req, res) => {
             update,
             {new: true}
         )
-    
+        await client.del(`students:applications:${application.userId}`)
         res.status(200).json({message: 'Application updated successfully'})
     } catch (error) {
         res.status(500).json({message: 'Error performing the operation'})

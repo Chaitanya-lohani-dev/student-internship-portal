@@ -41,7 +41,7 @@ export const submitApplication = async (req, res) => {
             jobId: req.params.id,
             resume: validation.data.resume
         })
-        await client.del("admin:applications");
+        await client.del(`admin:applications:${application.jobId}`);
         res.status(201).json({message: "Application Submitted Succesfully"})
     } catch (error) {
         res.status(500).json({message: "Error Submitting Application"})
