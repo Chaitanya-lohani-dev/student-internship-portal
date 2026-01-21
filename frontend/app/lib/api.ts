@@ -1,11 +1,40 @@
 import axios from "axios";
 
 const api = axios.create({
-    baseURL: 'http://127.0.0.1:3001/api',
+    baseURL: 'http://localhost:3001/api',
     withCredentials: true
 });
 
 let accessToken: string | null = null;
+
+api.interceptors.request.use((config) => {
+    if(accessToken) {
+        config.headers = config.headers || {} ;
+        config.headers.Authorization = `Bearer ${accessToken}`
+    } return config;
+}, (error) => Promise.reject(error))
+
+api.interceptors.response.use(res => res,
+    async (error) => {
+        const originalRequest = error.config;
+        
+        if (originalRequest.url?.includes("/auth/refresh-token")) {
+            return Promise.reject(error);
+        }
+
+        if (error.response?.status === 401 && !originalRequest._retry) {
+            originalRequest._retry  = true;
+
+            const newtoken  = await refreshTokenAPI();
+            if(newtoken) {
+                originalRequest.headers = originalRequest.headers || {};
+                originalRequest.headers.Authorization = `Bearer ${newtoken}`;
+                return api(originalRequest);
+            }
+        }
+        return Promise.reject(error);
+    }
+)
 
 export const loginAPI = async(email: string, password: string) => {
     try {
@@ -13,7 +42,7 @@ export const loginAPI = async(email: string, password: string) => {
             email: email,
             password: password
         });
-    
+        
         accessToken = res.data.accessToken;
         
         if (res.status === 200) {
@@ -48,5 +77,14 @@ export const refreshTokenAPI = async() => {
     } catch (error) {
         accessToken = null;
         return null;
+    }
+}
+
+export const getStudentJobs = async() => {
+    try {
+        const res = await api.get('/student/jobs')
+        return res
+    } catch (error) {
+        return error
     }
 }

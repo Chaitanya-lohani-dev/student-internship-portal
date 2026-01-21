@@ -1,5 +1,5 @@
 'use client';
-import { useState} from 'react'
+import { useState, useEffect} from 'react'
 import { z } from 'zod';
 import { loginAPI } from '../lib/api.ts';
 
@@ -10,7 +10,6 @@ const loginSchema = z.object({
 
 export default function Login() {
   const [state, setState] = useState(null)
-  
   const handelSubmit = async(e) => {
     e.preventDefault()
     const formData = new FormData(e.target);
@@ -21,9 +20,7 @@ export default function Login() {
         setState(<div className='bg-red-600 text-white'>Invalid Data Please try again</div>)
         return;
     }
-
     const { email, password} = validation.data;
-
     const res = await loginAPI(email, password);
 
     if (res === "loginSuccess"){
