@@ -1,5 +1,6 @@
 'use client';
 import { useState} from 'react'
+import { useRouter } from 'next/navigation';
 import { z } from 'zod';
 import { registerAPI } from '../lib/api.ts';
 
@@ -11,7 +12,8 @@ const registerSchema = z.object({
 
 export default function Register() {
   const [state, setState] = useState(null);
-  
+  const router = useRouter();
+
   const handelSubmit = async(e) => {
     e.preventDefault()
     const formData = new FormData(e.target);
@@ -27,8 +29,11 @@ export default function Register() {
 
     const res = await registerAPI(name, email, password);
 
-    if (res === "User Registered Successfully"){
+    if (res.message === "User Registered"){
       setState(<div className='text-white bg-green-600'>User Registered Successfullly</div>)
+    }else if (res.message === 'User all ready exists') {
+      setState(<div className='bg-red-600 text-white font-bold'>User Already Exist please Login</div>)
+      setTimeout(() => router.push("/login"), 2000)
     } else {
       setState(<div className='text-white bg-red-600'> Error Trying to Register</div>)
     }

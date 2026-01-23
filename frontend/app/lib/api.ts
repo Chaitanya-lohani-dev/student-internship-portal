@@ -18,8 +18,8 @@ api.interceptors.response.use(res => res,
     async (error) => {
         const originalRequest = error.config;
         
-        if (originalRequest.url?.includes("/auth/refresh-token")) {
-            return Promise.reject(error);
+        if (originalRequest.url?.includes("/auth/refresh-token") && error.response?.status === 401) {
+            throw new Error("Unauthorized")
         }
 
         if (error.response?.status === 401 && !originalRequest._retry) {
@@ -61,11 +61,9 @@ export const registerAPI = async(name:string, email: string, password: string) =
             password: password
         });
         
-        if (res.status === 201) {
-            return 'User Registered Successfully'; 
-        }
+        return res.data;
     } catch (error) {
-        return "Error Registering User"
+        throw new Error("Some error occoured")
     }
 }
 
@@ -83,8 +81,8 @@ export const refreshTokenAPI = async() => {
 export const getStudentJobs = async() => {
     try {
         const res = await api.get('/student/jobs')
-        return res
+        return res.data
     } catch (error) {
-        return error
+        throw error
     }
 }
