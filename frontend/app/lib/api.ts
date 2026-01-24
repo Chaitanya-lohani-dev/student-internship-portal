@@ -86,3 +86,23 @@ export const getStudentJobs = async() => {
         throw error
     }
 }
+
+export const getStudentJob = async(id: string) => {
+    try {
+        const res = await api.get(`/student/jobs/${id}`)
+        return res.data;
+    } catch (error) {
+        throw error;
+    }
+}
+
+export const submitApplication = async(id: string, cv: string) => {
+    try {
+        const res = await api.post(`/student/jobs/${id}`, {
+            resume: cv
+        })
+        return res.data;
+    } catch (error) {
+        throw error;
+    }
+}

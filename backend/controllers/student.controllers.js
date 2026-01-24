@@ -23,6 +23,20 @@ export const getJobs = async(req,res) => {
     }
 }
 
+export const getSingleJob = async(req, res) => {
+    try {
+        const job = await Job.findOne({_id: req.params.id, closesAt: { $gt: new Date()}})
+    
+        if(!job) {
+            return res.status(404).json({message: "Job not found or expired"})
+        }
+    
+        res.status(200).json(job)
+    } catch (error) {
+        res.status(500).json({message: "Some error occour"})
+    }
+}
+
 export const submitApplication = async (req, res) => {
     try {
         const application = await Application.findOne({jobId: req.params.id, userId: req.user.userId})
