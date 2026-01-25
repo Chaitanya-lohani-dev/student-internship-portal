@@ -35,7 +35,7 @@ export const createJob = async(req, res) => {
             closesAt,
             createdBy: req.user.userId
         })
-        await client.del("students:jobs")
+        await client.del("student:jobs")
         await client.del(`admin:jobs:${req.user.userId}`)
         res.status(201).json({message: 'Job Created Successfully'})
     } catch (error) {
@@ -64,7 +64,7 @@ export const updateJob = async(req, res) => {
         if (!job){
             return res.status(404).json({message: 'Invalid Job or Unauthorized'})
         }
-        await client.del("students:jobs")
+        await client.del("student:jobs")
         await client.del(`admin:jobs:${req.user.userId}`)
     
         res.status(200).json(job)

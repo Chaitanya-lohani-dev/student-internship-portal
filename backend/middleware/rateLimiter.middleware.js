@@ -7,7 +7,7 @@ export const rateLimiter = (client) => {
         const value = await client.get(ip);
         
         if (value === null) {
-            await client.set(ip, 5, { EX: 60 });
+            await client.set(ip, 14, { EX: 60 });
             return next();
         }
 
