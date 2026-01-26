@@ -1,9 +1,14 @@
 'use client';
 import { useRouter } from "next/navigation"
+import { useEffect } from "react";
 
 export default function page() {
   const router = useRouter();
-  router.push("/login")
+
+  useEffect(() => {
+    setTimeout(() => router.push('/student/jobs'),200)
+  },[])
+  
   return (
     <div>
       
