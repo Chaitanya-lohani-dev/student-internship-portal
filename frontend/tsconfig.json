@@ -29,6 +29,6 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts"
-, "app/pages/404.tsx"  ],
+, "app/pages/404.tsx", "app/student/[slug]/page.jsx"  ],
   "exclude": ["node_modules"]
 }
