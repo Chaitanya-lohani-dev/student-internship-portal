@@ -53,6 +53,16 @@ export const loginAPI = async(email: string, password: string) => {
     }
 }
 
+export const logoutAPI = async() => {
+    try {
+        accessToken = null;
+        const res = await api.post('/auth/logout');
+        return res;
+    } catch (error) {
+        throw error;
+    }
+}
+
 export const registerAPI = async(name:string, email: string, password: string) => {
     try {
         const res = await api.post('/auth/register', {
@@ -101,7 +111,7 @@ export const submitApplication = async(id: string, cv: string) => {
         const res = await api.post(`/student/jobs/${id}`, {
             resume: cv
         })
-        return res.data;
+        return res;
     } catch (error) {
         throw error;
     }

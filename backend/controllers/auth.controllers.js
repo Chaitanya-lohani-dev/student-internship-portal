@@ -100,7 +100,7 @@ export const logout = async (req, res) => {
         {refreshToken: undefined}
     )
 
-    res.status(200)
+    return res.status(200)
     .clearCookie('refreshToken', secureOptions)
     .json({message: 'User Logedout Successfully'})
 }
