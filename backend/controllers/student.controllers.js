@@ -80,7 +80,7 @@ export const getApplications = async (req, res) => {
 
         applications = await Application.find({ userId: req.user.userId })
         await client.set(`students:applications:${req.user.userId}`, JSON.stringify(applications), { EX: 900 })
-        res.status(200).json({ data: applications })
+        res.status(200).json({ applications })
     } catch (error) {
         res.status(500).json({ message: "error geting data", error: error })
     }

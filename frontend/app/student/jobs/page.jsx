@@ -48,7 +48,7 @@ export default function StudentJobs() {
             <div>
                 <Navbar />
                 <div className="space-y-4 m-2 p-2">
-                    {error  & <div className={error  ? 'bg-red-600 text-white' : 'invisible'}>{error}</div>}
+                    {error  && <div className={error  ? 'bg-red-600 text-white' : 'invisible'}>{error}</div>}
 
                     {data.length === 0 && !error && (
                         <div className={ data.length ===0 ?"text-gray-700": 'invisible'}>No jobs available right now</div>

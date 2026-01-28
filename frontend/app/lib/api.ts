@@ -116,3 +116,21 @@ export const submitApplication = async(id: string, cv: string) => {
         throw error;
     }
 }
+
+export const getStudentApplicationsAPI = async() => {
+    try {
+        const res = await api.get('/student/applications')
+        return res.data;
+    } catch (error) {
+        throw error;
+    }
+}
+
+export const delApplicationAPI = async(id: string) => {
+    try {
+        const res = await api.delete(`/student/applications/${id}`);
+        return res;
+    } catch (error) {
+        throw error;
+    }
+}
