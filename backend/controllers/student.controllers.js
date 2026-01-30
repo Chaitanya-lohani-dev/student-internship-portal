@@ -88,13 +88,14 @@ export const getApplications = async (req, res) => {
 
 export const delApplication = async (req, res) => {
     try {
-        const application = await Application.findOne({ jobId: req.params.id, userId: req.user.userId })
-
+        const application = await Application.findById(req.params.id)
         if (!application) {
             return res.status(404).json({ message: 'No Such application exists' })
         }
 
         await Application.findOneAndDelete({ _id: application._id })
+        await Job.findByIdAndUpdate({_id: application.jobId}, { $inc: { applicationCount: -1 } });
+
         await client.del(`students:applications:${req.user.userId}`)
         res.status(200).json({ message: "Application Deleted Successfully" })
     } catch (error) {

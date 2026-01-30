@@ -29,7 +29,8 @@ export default function StudentApplicationsPage() {
         setDelStatus("Application deleted successfully");
         setTimeout(() => setDelStatus(null), 2000);
       }
-    } catch {
+    } catch (error){
+      console.log(error)
       setDelError("Failed to delete application");
       setTimeout(() => setDelError(null), 2000);
     }
