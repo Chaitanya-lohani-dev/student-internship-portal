@@ -134,3 +134,12 @@ export const delApplicationAPI = async(id: string) => {
         throw error;
     }
 }
+
+export const getAdminJobs = async() => {
+    try {
+        const res = await api.get('/admin/jobs');
+        return res
+    } catch (error) {
+        throw error;
+    }
+}

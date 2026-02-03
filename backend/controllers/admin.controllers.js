@@ -82,7 +82,7 @@ export const getJobs = async(req, res) => {
 
         data = await Job.find({createdBy: req.user.userId}).sort({createdAt: -1})
         await client.set(`admin:jobs:${req.user.userId}`, JSON.stringify(data), { EX: 3600})
-        res.status(200).json({data: data})
+        res.status(200).json({ data })
     } catch (error) {
         res.status(500).json({message: 'Database error fetching data.'})
     }
