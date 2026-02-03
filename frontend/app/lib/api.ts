@@ -143,3 +143,12 @@ export const getAdminJobs = async() => {
         throw error;
     }
 }
+
+export const getAdminApplications = async(id: string) => {
+    try {
+        const res = await api.get(`/admin/applications/${id}`);
+        return res.data;
+    } catch (error) {
+        throw error;
+    }
+}

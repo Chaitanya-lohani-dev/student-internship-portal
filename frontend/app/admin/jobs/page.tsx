@@ -56,11 +56,11 @@ export default function JobsPage() {
         {data.length === 0 && !error  && (
           <div className={data.length === 0 ? '' : 'invisible'}>No Jobs Found</div>
         )}
-        
+
         {data.map(job => (
           <div key={job._id} onClick={(e) => handleClick(e, job._id)} className="p-2 m-2 flex flex-col max-w-full border-2">
-            <div className="text-2xl font-extrabold">{job.title}</div>
-            <div className="text-3xl font-bold">{job.description.slice(0,120)}</div>
+            <div className="text-2xl font-bold">{job.title}</div>
+            <div className="text-3xl font-bold">{job.description.slice(0,120) + "..."}</div>
             <div className="font-bold text-sm">{job.applicationCount}</div>
           </div>
         ))}
