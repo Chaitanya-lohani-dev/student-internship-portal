@@ -152,3 +152,14 @@ export const getAdminApplications = async(id: string) => {
         throw error;
     }
 }
+
+export const adminUpdateApplicationStatus = async(id: string, update: string) => {
+    try {
+        const res = await api.patch(`/admin/applications/${id}`, {
+            status: update
+        });
+        return res
+    } catch (error) {
+        throw error;
+    }
+}
