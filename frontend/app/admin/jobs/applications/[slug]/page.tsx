@@ -29,6 +29,7 @@ export default function page() {
 
     const handelClick = async (e: any, newStatus: string, id: string) => {
         try {
+            e.preventDefault();
             setUpdateLoading(true);
             if (!newStatus) {
                 setUpdateError("Something went wrong!");

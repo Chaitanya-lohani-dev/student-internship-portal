@@ -1,5 +1,6 @@
 import axios from "axios";
 
+// some setup for axios
 const api = axios.create({
     baseURL: 'http://localhost:3001/api',
     withCredentials: true
@@ -36,6 +37,7 @@ api.interceptors.response.use(res => res,
     }
 )
 
+// login api's
 export const loginAPI = async(email: string, password: string) => {
     try {
         const res = await api.post('/auth/login', {
@@ -88,6 +90,7 @@ export const refreshTokenAPI = async() => {
     }
 }
 
+// student api's
 export const getStudentJobs = async() => {
     try {
         const res = await api.get('/student/jobs')
@@ -135,6 +138,7 @@ export const delApplicationAPI = async(id: string) => {
     }
 }
 
+// admin api's
 export const getAdminJobs = async() => {
     try {
         const res = await api.get('/admin/jobs');
@@ -159,6 +163,32 @@ export const adminUpdateApplicationStatus = async(id: string, update: string) =>
             status: update
         });
         return res
+    } catch (error) {
+        throw error;
+    }
+}
+
+export const adminCreateJob = async(title: string, description: string, closesAt: string) => {
+    try {
+        const res = await api.post('admin/jobs', {
+            title: title,
+            description: description,
+            closesAt: closesAt
+        });
+        return res;
+    } catch (error) {
+        throw error;
+    }
+}
+
+export const updateAdminJob = async(id: string, title: string, description: string, closesAt: string) => {
+    try {
+        const res = api.patch(`/applications/${id}`, {
+            title: title,
+            description: description,
+            closesAt: closesAt
+        });
+        return res;
     } catch (error) {
         throw error;
     }
