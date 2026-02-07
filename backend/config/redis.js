@@ -1,6 +1,6 @@
 import redis from "redis";
 
-const client = redis.createClient({url: "redis://localhost:32768"});
+const client = redis.createClient();
 client.on("error", err => {
     console.error("Redis error:", err)
     process.exit(1);
