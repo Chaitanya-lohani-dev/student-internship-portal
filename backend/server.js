@@ -17,7 +17,7 @@ const port = process.env.PORT || 5000;
 
 app.use(cookieParser());
 app.use(express.json());
-app.use(cors({origin: "http://localhost:3000", credentials: true}));
+app.use(cors({origin: `${process.env.ALLOWED_ORIGINS}` ||"http://localhost:3000", credentials: true}));
 app.use(rateLimiter(client));
 app.use('/api/auth', authRoutes)
 app.use('/api/admin', adminRoutes)

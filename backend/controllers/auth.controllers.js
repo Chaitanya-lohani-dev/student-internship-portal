@@ -41,6 +41,7 @@ export const register = async (req, res) => {
         await user.save()
         res.status(201).json({message: 'User Registered'})
     } catch (error) {
+        console.error("Some Error occurred: ", error);
         res.status(500).json({message: "Internal server error"})
     }
 }
@@ -81,6 +82,7 @@ export const login = async (req, res) => {
         .cookie('refreshToken', refreshToken, secureOptions)
         .json({'accessToken': accessToken})
     } catch (error) {
+        console.error("Some Error occurred: ", error);
         res.status(500).json({message: 'Internal Server error'})
     }
 }
@@ -152,6 +154,7 @@ export const refresh = async (req, res) => {
       .json({ accessToken: newAccessToken });
 
   } catch (error) {
+    console.error("Some Error occurred: ", error);
     return res.status(401).json({ message: "Invalid or expired refresh token" });
   }
 };

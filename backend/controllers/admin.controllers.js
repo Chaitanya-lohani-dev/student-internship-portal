@@ -39,6 +39,7 @@ export const createJob = async(req, res) => {
         await client.del(`admin:jobs:${req.user.userId}`)
         res.status(201).json({message: 'Job Created Successfully'})
     } catch (error) {
+        console.error("Some error occurred: ", error)
         res.status(500).json({message: 'Internal Server error'})
     }
 }
@@ -69,6 +70,7 @@ export const updateJob = async(req, res) => {
     
         res.status(200).json(job)
     } catch (error) {
+        console.error("Some error occurred: ", error)
         return res.status(500).json({message: 'Internal Server Error'})
     }
 }
@@ -84,6 +86,7 @@ export const getJobs = async(req, res) => {
         await client.set(`admin:jobs:${req.user.userId}`, JSON.stringify(data), { EX: 3600})
         res.status(200).json({ data })
     } catch (error) {
+        console.error("Some error occurred: ", error)
         res.status(500).json({message: 'Database error fetching data.'})
     }
 }
@@ -105,6 +108,7 @@ export const getApplications = async(req, res) => {
         await client.set(`admin:applications:${req.params.id}`, JSON.stringify(applications), { EX: 900})
         res.status(200).json({data: applications})
     } catch (error) {
+        console.error("Some error occurred: ", error)
         res.status(500).json({message: "Error fetching data"})
     }
 }
@@ -144,6 +148,7 @@ export const updateApplications = async(req, res) => {
         await client.del(`students:applications:${application.userId}`)
         res.status(200).json({message: 'Application updated successfully'})
     } catch (error) {
+        console.error("Some error occurred: ", error)
         res.status(500).json({message: 'Error performing the operation'})
     }
 }

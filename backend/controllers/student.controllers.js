@@ -19,6 +19,7 @@ export const getJobs = async (req, res) => {
         await client.set('student:jobs', JSON.stringify(jobs), { EX: 3600 })
         res.status(200).json({ jobs })
     } catch (error) {
+        console.error("Some error occurred: ", error)
         res.status(500).json({ message: "Error fetching data" })
     }
 }
@@ -33,6 +34,7 @@ export const getSingleJob = async (req, res) => {
 
         res.status(200).json(job)
     } catch (error) {
+        console.error("Some error occurred: ", error)
         res.status(500).json({ message: "Some error occour" })
     }
 }
@@ -66,6 +68,7 @@ export const submitApplication = async (req, res) => {
         
         res.status(201).json({ message: "Application Submitted Succesfully" })
     } catch (error) {
+        console.error("Some error occurred: ", error)
         res.status(500).json({ message: "Error Submitting Application" })
     }
 }
@@ -82,6 +85,7 @@ export const getApplications = async (req, res) => {
         await client.set(`students:applications:${req.user.userId}`, JSON.stringify(applications), { EX: 900 })
         res.status(200).json({ applications })
     } catch (error) {
+        console.error("Some error occurred: ", error)
         res.status(500).json({ message: "error geting data", error: error })
     }
 }
@@ -99,6 +103,7 @@ export const delApplication = async (req, res) => {
         await client.del(`students:applications:${req.user.userId}`)
         res.status(200).json({ message: "Application Deleted Successfully" })
     } catch (error) {
+        console.error("Some error occurred: ", error)
         res.status(500).json({ message: "Error Deleting Application" })
     }
 }
