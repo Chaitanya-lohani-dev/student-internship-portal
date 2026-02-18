@@ -47,10 +47,11 @@ A full-stack internship management platform where:
 - JWT Authentication
 - Zod Validation
 
-### Frontend (Upcoming)
-- Next.js (Server Components)
-- Tailwind CSS
-- Cookie-based auth
+### Frontend
+- Next.js (App Router, React)
+- Tailwind CSS v4 + shadcn/ui-inspired components
+- Axios (with automatic token refresh)
+- Zod for client-side validation
 
 ---
 
@@ -64,13 +65,47 @@ student-internship-portal/
 │ ├── models/
 │ ├── config/
 │ └── server.js
-└── frontend/ (Coming soon)
+└── frontend/
+   ├── app/              # Next.js routes (admin, student, auth)
+   ├── components/       # Shared components and UI primitives
+   └── lib/              # API client, EdgeStore, utilities
 ```
 
 ---
 
 ## Setup
 
-See `backend/README.md` for backend setup instructions.
+### 1. Backend
 
-Frontend will be added in the next phase.
+See `backend/Readme.md` for full backend setup instructions.
+
+High level:
+
+```bash
+cd backend
+npm install
+npm run dev
+```
+
+The API will run at `http://127.0.0.1:3001` (base URL `http://127.0.0.1:3001/api`).
+
+### 2. Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The Next.js app will run at `http://localhost:3000` and is configured to talk to the backend at `http://localhost:3001/api` via `lib/api.ts`.
+
+---
+
+## Phase 2 Roadmap (High-Level)
+
+Planned improvements for the next phase include:
+
+- **Event-driven architecture** for key domain events (e.g. job created, application submitted/updated)
+- **Client-side caching** for jobs and applications (React Query/SWR) to reduce latency and improve UX
+- Enhanced **observability and logging** for production (structured logs, metrics)
+- Additional **UI/UX polish**, accessibility improvements, and admin/student features built on top of the current foundation

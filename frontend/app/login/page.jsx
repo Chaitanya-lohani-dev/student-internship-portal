@@ -1,68 +1,135 @@
 'use client';
-import { useState } from 'react'
+import { useState } from 'react';
 import { z } from 'zod';
-import { loginAPI } from '../lib/api.ts';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
+import { loginAPI } from '@/lib/api';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Alert } from '@/components/ui/alert';
+
 const loginSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(6)
+  password: z.string().min(6),
 });
 
 export default function Login() {
-  const [state, setState] = useState(null)
-  const [loading,setLoading] = useState(false);
-  const [success,setSuccess] = useState(false);
-  const [showPassword, setShowPassword] = useState(true);
+  const [message, setMessage] = useState(null);
+  const [isError, setIsError] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const router = useRouter();
 
-  const handelSubmit = async(e) => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setMessage(null);
+    setIsError(false);
+
     try {
-      e.preventDefault()
-      setLoading(true)
+      setLoading(true);
+
       const formData = new FormData(e.target);
       const data = Object.fromEntries(formData.entries());
       const validation = loginSchema.safeParse(data);
-  
+
       if (!validation.success) {
-        setState('Invalid Data Please try again')
+        setIsError(true);
+        setMessage('Please enter a valid email and a password with at least 6 characters.');
         return;
       }
-  
-      const { email, password} = validation.data;
+
+      const { email, password } = validation.data;
       const res = await loginAPI(email, password);
-  
-      if (res === "loginSuccess"){
-        setSuccess(true)
-        setState('Login successful')
-        setTimeout(() => router.push('/student/jobs'), 2000)
+
+      if (res === 'loginSuccess') {
+        setIsError(false);
+        setMessage('Login successful. Redirecting to jobs...');
+        setTimeout(() => router.push('/student/jobs'), 800);
       } else {
-        setState('Error Trying to Login')
+        setIsError(true);
+        setMessage('Error trying to login. Please check your credentials and try again.');
       }
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
-  
+  };
+
   return (
-    <div className='m-5 p-5 border-2 border-black w-120 justify-items-center bg-blue-500 text-white'>
-      <form onSubmit={handelSubmit} className='flex flex-col'>
-        <div className='flex flex-row font-bold'><label>Email</label><p className='text-red-600'>*</p></div>
-        <input type='email' name='email' required className='block border'></input>
-        <div className='flex flex-row font-bold'><label>Password</label><div className='text-red-600'>*</div></div>
-        <div className='flex flex-row'><input type={showPassword ? "password": 'text'} name='password' required className='border'></input> <button type='button'onClick={()=> setShowPassword(!showPassword)}>👁️</button></div>
-        <button type='submit' className='block m-2 p-2 bg-blue-600' disabled={loading}>{loading ? "submitting..." : 'submit'}</button>
-      </form>
-      {state!==null &&
-      <div className={success ? "bg-green-700 text-white": 'bg-red-700 text-white'}>{state}</div>}
-      <div className='flex justify-between space-x-2'>
-        <div>
-          Don't Have a account?
-        </div>
-        <Link href={'/register'} className='font-bold'>Register Now</Link>
+    <div className="min-h-screen bg-linear-to-br from-background via-background to-muted flex items-center justify-center px-4">
+      <div className="w-full max-w-md">
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-2xl">Welcome back</CardTitle>
+            <CardDescription>Sign in to continue to the internship portal.</CardDescription>
+          </CardHeader>
+
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-1">
+                <label htmlFor="email" className="flex items-center text-sm font-medium">
+                  <span>Email</span>
+                  <span className="ml-1 text-destructive">*</span>
+                </label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  placeholder="you@example.com"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label htmlFor="password" className="flex items-center text-sm font-medium">
+                  <span>Password</span>
+                  <span className="ml-1 text-destructive">*</span>
+                </label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="password"
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    required
+                    placeholder="••••••••"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                  >
+                    {showPassword ? 'Hide' : 'Show'}
+                  </Button>
+                </div>
+              </div>
+
+              {message && (
+                <Alert variant={isError ? 'error' : 'success'}>
+                  <span>{message}</span>
+                </Alert>
+              )}
+
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? 'Signing in...' : 'Sign in'}
+              </Button>
+            </form>
+          </CardContent>
+
+          <CardFooter className="flex items-center justify-between text-sm text-muted-foreground">
+            <span>Don't have an account?</span>
+            <Link href="/register" className="font-medium text-primary hover:underline">
+              Register now
+            </Link>
+          </CardFooter>
+        </Card>
       </div>
     </div>
-  )
+  );
 }
+

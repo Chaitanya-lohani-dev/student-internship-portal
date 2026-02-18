@@ -170,7 +170,7 @@ export const adminUpdateApplicationStatus = async(id: string, update: string) =>
 
 export const adminCreateJob = async(title: string, description: string, closesAt: string) => {
     try {
-        const res = await api.post('admin/jobs', {
+        const res = await api.post('/admin/jobs', {
             title: title,
             description: description,
             closesAt: closesAt
@@ -183,7 +183,7 @@ export const adminCreateJob = async(title: string, description: string, closesAt
 
 export const updateAdminJob = async(id: string, title: string, description: string, closesAt: string) => {
     try {
-        const res = api.patch(`/applications/${id}`, {
+        const res = await api.put(`/admin/jobs/${id}`, {
             title: title,
             description: description,
             closesAt: closesAt

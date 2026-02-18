@@ -26,29 +26,41 @@ This is the backend service for the Student Internship Portal.
 ## Environment Variables
 
 Create a `.env` file:
-```
-PORT =3001
+```env
+PORT=3001
 MONGODB_URL=your_mongodb_url
-ACCESS_TOKEN_SECRET=your_secreat
-REFRESH_TOKEN_SECRET=your_secreat
+ACCESS_TOKEN_SECRET=your_access_token_secret
+REFRESH_TOKEN_SECRET=your_refresh_token_secret
 NODE_ENV=development
+
+# Optional – if Redis is not on localhost:6379
+# REDIS_URL=redis://127.0.0.1:6379
 ```
 ---
 
 ## Redis Setup (Docker)
-`docker run -d -p 6379:6379 redis`
-If using custom port:
-`REDIS_URL=redis://127.0.0.1:6379`
+
+Run Redis locally with Docker:
+```bash
+docker run -d -p 6379:6379 redis
+```
+
+If using a custom port or remote instance, set:
+
+```env
+REDIS_URL=redis://127.0.0.1:6379
+```
 ---
 ## Install & Run
-```
+
+```bash
 npm install
 npm run dev
-
-Server will start at: http://127.0.0.1:3001
-
-Health check: GET /health
 ```
+
+- Server will start at: `http://127.0.0.1:3001`
+- Base API URL: `http://127.0.0.1:3001/api`
+- Health check: `GET /health`
 ---
 
 ## API Routes
@@ -60,7 +72,7 @@ POST /api/auth/refresh-token
 POST /api/auth/logout
 ```
 
-### student
+### Student
 ```
 GET /api/student/jobs
 POST /api/student/jobs/:id
@@ -104,5 +116,5 @@ PATCH /api/admin/applications/:id
 
 ## Status
 
-Backend is feature-complete and stable.  
-Frontend implementation starts next.
+Backend is **feature-complete and stable** and is used in production by the Next.js frontend in `frontend/`.
+

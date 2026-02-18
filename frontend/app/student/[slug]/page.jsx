@@ -1,117 +1,209 @@
 "use client";
-import { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
-import { getStudentJob, submitApplication } from '@/app/lib/api.ts';
-import { useEdgeStore } from '@/app/lib/edgestore.ts';
-import Navbar from '@/app/components/Navbar';
+import { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
+
+import { getStudentJob, submitApplication } from "@/lib/api";
+import { useEdgeStore } from "@/lib/edgestore";
+import Navbar from "@/components/Navbar";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Alert } from "@/components/ui/alert";
 
 export default function StudentJobPage() {
-    const [data, setData] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [file, setFile] = useState(null);
-    const { edgestore } = useEdgeStore();
-    const [uploadProgress, setUploadProgress] = useState(0);
-    const [statusMessage, setStatusMessage] = useState(null);
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [file, setFile] = useState(null);
+  const { edgestore } = useEdgeStore();
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [statusMessage, setStatusMessage] = useState(null);
+  const [statusError, setStatusError] = useState(null);
 
-    const params = useParams();
-    const slug = Array.isArray(params.slug)
-        ? params.slug[0]
-        : params.slug;
+  const params = useParams();
+  const slug = Array.isArray(params.slug) ? params.slug[0] : params.slug;
 
-    const router = useRouter();
+  const router = useRouter();
 
-    const handelSubmit = async (e) => {
-        try {
-            e.preventDefault();
-            if (!file) {
-                setError("Please upload the file...")
-                return;
-            }
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setStatusMessage(null);
+    setStatusError(null);
 
-            const resumeUrl = await edgestore.publicFiles.upload({
-                file,
-                onProgressChange: (progress) => {
-                    setUploadProgress(progress);
-                },
-            });
-            const res = await submitApplication(slug, resumeUrl.url);
-            
-            if (res.status === 201) {
-                setStatusMessage("Sucessfully Submited the application");
-            }
+    try {
+      if (!file) {
+        setStatusError("Please upload your resume before submitting.");
+        return;
+      }
 
-        } catch (error) {
-            if (error.response?.status === 409) {
-                setStatusMessage("Application Alredy Exists");
-            } else {
-                setStatusMessage("Some error occour")
-            }
-        } finally {
-            setTimeout(() => setStatusMessage(null),2000);
-        }
+      const resumeUrl = await edgestore.publicFiles.upload({
+        file,
+        onProgressChange: (progress) => {
+          setUploadProgress(progress);
+        },
+      });
+
+      const res = await submitApplication(slug, resumeUrl.url);
+
+      if (res.status === 201) {
+        setStatusMessage("Successfully submitted the application.");
+      }
+    } catch (error) {
+      if (error.response?.status === 409) {
+        setStatusError("You have already applied for this job.");
+      } else {
+        setStatusError("Something went wrong while submitting. Please try again.");
+      }
+    } finally {
+      setTimeout(() => {
+        setStatusMessage(null);
+        setStatusError(null);
+      }, 2500);
     }
+  };
 
-    useEffect(() => {
-
-        const fetchData = async (slug) => {
-            try {
-                if (!slug) {
-                    setError('Some Error Occurred');
-                    setTimeout(() => router.push('/student/jobs'), 200);
-                    return;
-                }
-
-                const jobData = await getStudentJob(slug);
-                if (jobData) {
-                    setData(jobData);
-                } else {
-                    setError('Some error occur')
-                }
-            } catch (error) {
-                if (error.response?.status === 401) {
-                    setError('Plase Retry after Login....')
-                    setTimeout(() => router.push('/login'), 200)
-                }
-
-                if (error.response?.status === 429) {
-                    setError("Too many request please try again after some time... ")
-                }
-            } finally {
-                setLoading(false)
-                setFile(null)
-                setUploadProgress(0);
-            }
+  useEffect(() => {
+    const fetchData = async (slugValue) => {
+      try {
+        if (!slugValue) {
+          setError("Something went wrong. Redirecting to job list...");
+          setTimeout(() => router.push("/student/jobs"), 500);
+          return;
         }
-        fetchData(slug);
-    }, [slug]);
 
-    if (loading) return (<div>Loding...</div>)
-    if (error) return (<div className={error ? 'bg-red-700 text-white' : 'invisible'}>{error}</div>)
+        const jobData = await getStudentJob(slugValue);
+        if (jobData) {
+          setData(jobData);
+        } else {
+          setError("Unable to load this job. Please try again.");
+        }
+      } catch (error) {
+        if (error.response?.status === 401) {
+          setError("Session expired. Redirecting to login...");
+          setTimeout(() => router.push("/login"), 500);
+        } else if (error.response?.status === 429) {
+          setError("Too many requests. Please try again after some time.");
+        } else if (error.response?.status === 404) {
+          setError("This job is no longer available.");
+        } else {
+          setError("Could not load the job details. Please try again.");
+        }
+      } finally {
+        setLoading(false);
+        setFile(null);
+        setUploadProgress(0);
+      }
+    };
+
+    fetchData(slug);
+  }, [slug, router]);
+
+  if (loading) {
     return (
-        <div>
-            <Navbar />
-            <div className=' bg-gray-300 w-full h-full font-bold'>
-                <div className='m-5 p-5'>
-                    <form onSubmit={(e) => handelSubmit(e)}>
-                        <div className=''>
-                            <div className='text-4xl'>{data.title}</div>
-                            <div className='text-2xl'>{data.description}</div>
-                            <div className='flex flex-row justify-between'>
-                                <div>Closes At Date: {data.closesAt.slice(0, 10)}</div>
-                                <div>Closes At Time: {data.closesAt.slice(11, 16)}</div>
-                                <div className={data?.lastUpdated ? '' : 'invisible'}>Last Updated Date: {data?.lastUpdated ? data?.lastUpdated.slice(0, 10) : ''}</div>
-                                <div className={data?.lastUpdated ? '' : 'invisible'}>Last Updated Time{data?.lastUpdated ? data?.lastUpdated.slice(11, 16) : ''}</div>
-                            </div>
-                        </div>
-                        <input className='block' type="file" name="resume" id="resume" onChange={(e) => { setFile(e.target.files?.[0]); }} />
-                        <button type="submit" className='p-2 m-2 justify-center bg-amber-600
-                        text-white' disabled={uploadProgress > 0 && uploadProgress>100}>{uploadProgress>0 ? 'submitting..' : 'submit'}</button>
-                    </form>
-                    <div className={uploadProgress > 0 ? 'bg-green-600 text-white' : 'invisible'}>{uploadProgress}</div>
-                    {statusMessage !== null && <div className={statusMessage !== null ? 'bg-green-600 text-white' : 'invisible'}>{statusMessage}</div>}
+      <div className="flex min-h-screen items-center justify-center">
+        <span className="text-sm text-muted-foreground">Loading job details...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex min-h-screen items-center justify-center px-4">
+        <Alert variant="error">{error}</Alert>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Navbar />
+
+      <main className="mx-auto max-w-4xl px-4 py-8">
+        <Card className="shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-2xl">{data.title}</CardTitle>
+            <CardDescription className="space-y-1 text-sm">
+              <p>{data.description}</p>
+              <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                <span>
+                  Closes on <span className="font-medium">{data.closesAt.slice(0, 10)}</span> at{" "}
+                  <span className="font-medium">{data.closesAt.slice(11, 16)}</span>
+                </span>
+                {data?.lastUpdated && (
+                  <span>
+                    Last updated on{" "}
+                    <span className="font-medium">{data.lastUpdated.slice(0, 10)}</span> at{" "}
+                    <span className="font-medium">{data.lastUpdated.slice(11, 16)}</span>
+                  </span>
+                )}
+              </div>
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <label
+                  htmlFor="resume"
+                  className="block text-sm font-medium text-foreground"
+                >
+                  Upload resume (PDF)
+                </label>
+                <input
+                  className="block w-full rounded-md border border-input bg-background text-sm file:mr-4 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-primary-foreground hover:file:bg-primary/90"
+                  type="file"
+                  name="resume"
+                  id="resume"
+                  accept=".pdf"
+                  onChange={(e) => {
+                    const nextFile = e.target.files?.[0] ?? null;
+                    setFile(nextFile);
+                  }}
+                />
+              </div>
+
+              {uploadProgress > 0 && (
+                <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full bg-primary transition-all"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
                 </div>
-            </div>
-        </div>
-    )
+              )}
+
+              {statusMessage && (
+                <Alert variant="success">
+                  {statusMessage}
+                </Alert>
+              )}
+
+              {statusError && (
+                <Alert variant="error">
+                  {statusError}
+                </Alert>
+              )}
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => router.push("/student/jobs")}
+                >
+                  Back to jobs
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={uploadProgress > 0 && uploadProgress < 100}
+                >
+                  {uploadProgress > 0 && uploadProgress < 100
+                    ? "Submitting..."
+                    : "Submit application"}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      </main>
+    </div>
+  );
 }
+

@@ -1,70 +1,118 @@
 'use client';
-import { getAdminJobs } from "@/app/lib/api";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { getAdminJobs } from "@/lib/api";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { Alert } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+
 type Jobs = {
-  _id: string,
-  title: string,
-  description: string,
-  applicationCount: number
-}
+  _id: string;
+  title: string;
+  description: string;
+  applicationCount: number;
+};
 
 export default function JobsPage() {
   const [data, setData] = useState<Jobs[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   const router = useRouter();
 
-  const handleClick = async(e : any, id: string) => {
-    e.preventDefault();
-    router.push(`/admin/jobs/applications/${id}`); 
-  }
+  const handleClick = (id: string) => {
+    router.push(`/admin/jobs/applications/${id}`);
+  };
 
   useEffect(() => {
-    const fetchData = async() => {
+    const fetchData = async () => {
       try {
         const res = await getAdminJobs();
-        const jobs = res.data.data;
+        const jobs = res.data.data as Jobs[];
         setData(jobs);
       } catch (error: any) {
         if (error?.response?.status === 401) {
-          router.push('/login');
-        }else if (error?.response?.status === 403) {
-          setError("Forbiden...")
-          setTimeout(() => router.push('/jobs'), 200)
+          router.push("/login");
+        } else if (error?.response?.status === 403) {
+          setError("Forbidden. You are not allowed to view these jobs.");
+          setTimeout(() => router.push("/student/jobs"), 400);
         } else {
-          setError("Some error Occur");
-          console.log(error)
+          setError("Something went wrong while loading jobs.");
+          console.error(error);
         }
       } finally {
         setLoading(false);
       }
-    }
+    };
 
     fetchData();
-  },[])
-  
-  if (loading) return <div>Loading...</div>
+  }, [router]);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <span className="text-sm text-muted-foreground">Loading jobs...</span>
+      </div>
+    );
+  }
 
   return (
-    <div className="m-0 p-0">
-      <div>
-        {error && <div className={error ? "bg-red-600 text-white": 'invisible'}>{error}</div>}
-        
-        {data.length === 0 && !error  && (
-          <div className={data.length === 0 ? '' : 'invisible'}>No Jobs Found</div>
+    <div className="min-h-screen bg-background">
+      <main className="mx-auto max-w-5xl px-4 py-8">
+        <header className="mb-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold">Jobs you manage</h1>
+            <p className="text-sm text-muted-foreground">
+              View your postings and see how many applications each has received.
+            </p>
+          </div>
+          <Badge variant="outline" className="text-xs">
+            {data.length} job{data.length === 1 ? "" : "s"}
+          </Badge>
+        </header>
+
+        {error && (
+          <div className="mb-4">
+            <Alert variant="error">{error}</Alert>
+          </div>
         )}
 
-        {data.map(job => (
-          <div key={job._id} onClick={(e) => handleClick(e, job._id)} className="p-2 m-2 flex flex-col max-w-full border-2">
-            <div className="text-2xl font-bold">{job.title}</div>
-            <div className="text-3xl font-bold">{job.description.slice(0,120) + "..."}</div>
-            <div className="font-bold text-sm">{job.applicationCount}</div>
-          </div>
-        ))}
-      </div>
+        {!error && data.length === 0 && (
+          <Alert variant="info">No jobs found. Create a job to get started.</Alert>
+        )}
+
+        <div className="mt-4 space-y-3">
+          {data.map((job) => (
+            <Card
+              key={job._id}
+              className="cursor-pointer transition hover:border-primary/40 hover:shadow-sm"
+              onClick={() => handleClick(job._id)}
+            >
+              <CardHeader>
+                <CardTitle className="text-lg">{job.title}</CardTitle>
+                <CardDescription className="line-clamp-2 text-sm">
+                  {job.description.length > 200
+                    ? job.description.slice(0, 200) + "..."
+                    : job.description}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-xs text-muted-foreground">
+                  Applications received:{" "}
+                  <span className="font-medium">{job.applicationCount}</span>
+                </p>
+              </CardContent>
+              <CardFooter className="flex justify-end">
+                <span className="text-sm font-medium text-primary">
+                  View applications →
+                </span>
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      </main>
     </div>
-  )
+  );
 }
+

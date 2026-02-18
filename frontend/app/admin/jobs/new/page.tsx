@@ -1,31 +1,37 @@
 'use client';
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { adminCreateJob, getAdminJobs, updateAdminJob } from '@/app/lib/api';
-import { z } from 'zod';
+import { z } from "zod";
+
+import { adminCreateJob, getAdminJobs, updateAdminJob } from "@/lib/api";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Alert } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 
 type Jobs = {
-  _id: string,
-  title: string,
-  description: string,
-  closesAt: string,
-  applicationCount: string
-}
+  _id: string;
+  title: string;
+  description: string;
+  closesAt: string;
+  applicationCount: string;
+};
 
 const jobSchema = z.object({
   title: z.string().min(10),
   description: z.string().min(200),
   closesAt: z.string(),
-})
+});
 
-export default function page() {
+export default function Page() {
   const [jobSubmit, setJobSubmit] = useState<boolean>(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [createState, setCreateState] = useState<string | null>(null);
   const [jobs, setJobs] = useState<Jobs[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [editButton, setEditButton] = useState<boolean>(false);
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -39,63 +45,69 @@ export default function page() {
     setForm({
       title: job.title,
       description: job.description,
-      closesAt: job.closesAt.slice(0, 16), 
+      closesAt: job.closesAt.slice(0, 16),
     });
-
-    setEditButton(true);
+    setEditingId(job._id);
+    setCreateState(null);
+    setSubmitError(null);
   };
 
-  const handelSubmit = async (e: any) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setSubmitError(null);
+    setCreateState(null);
+
     try {
       setJobSubmit(true);
-      e.preventDefault();
-      const formData = new FormData(e.target);
+      const formData = new FormData(e.currentTarget);
       const data = Object.fromEntries(formData.entries());
       const validation = jobSchema.safeParse(data);
 
       if (!validation.success) {
-        setSubmitError("Please input valid data");
-        setJobSubmit(false);
+        setSubmitError("Please provide a title (min 10 chars) and description (min 200 chars).");
         return;
       }
 
-      const { title, description, closesAt } = validation.data
+      const { title, description, closesAt } = validation.data;
 
-      if(editingId) {
+      if (editingId) {
         const res = await updateAdminJob(editingId, title, description, closesAt);
         if (res.status === 200) {
-          setCreateState("Job Updated Successfully")
+          setCreateState("Job updated successfully.");
+          const refreshed = await getAdminJobs();
+          setJobs(refreshed.data.data);
         }
       } else {
         const res = await adminCreateJob(title, description, closesAt);
         if (res.status === 201) {
-          setCreateState("Job Created Successfully")
+          setCreateState("Job created successfully.");
+          const refreshed = await getAdminJobs();
+          setJobs(refreshed.data.data);
         }
       }
-
     } catch (error: any) {
       if (error?.response?.status === 400) {
-        setError("Unable to update job")
+        setError("Unable to update job. Please check the details and try again.");
       } else if (error?.response?.status === 401) {
-        setError("Session expired")
-        setTimeout(() => router.push("/login"), 1000)
+        setError("Session expired. Redirecting to login...");
+        setTimeout(() => router.push("/login"), 1000);
       } else if (error?.response?.status === 403) {
-        setError("unauthorized")
-        setTimeout(() => router.push('/student/jobs'), 1000)
+        setError("Unauthorized. Redirecting to student jobs...");
+        setTimeout(() => router.push("/student/jobs"), 1000);
       } else {
-        setError("Some Error Occured")
+        setError("Some error occurred while processing your request.");
       }
     } finally {
       setJobSubmit(false);
-      setForm({
-        title: "",
-        description: "",
-        closesAt: "",
-      });
-
-      setEditingId(null);
     }
-  }
+
+    setForm({
+      title: "",
+      description: "",
+      closesAt: "",
+    });
+    setEditingId(null);
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -104,73 +116,178 @@ export default function page() {
         setJobs(res.data.data);
       } catch (error: any) {
         if (error?.response?.status === 401) {
-          setError("Session expired.")
-          setTimeout(() => router.push("/login"), 1000)
+          setError("Session expired.");
+          setTimeout(() => router.push("/login"), 1000);
         } else if (error?.response?.status === 403) {
-          setError("Unauthorized.")
-          setTimeout(() => router.push('/student/jobs'), 1000)
+          setError("Unauthorized.");
+          setTimeout(() => router.push("/student/jobs"), 1000);
         } else {
-          setError("Some error occured while prcessing requeest")
+          setError("Some error occurred while processing request.");
         }
       } finally {
         setLoading(false);
       }
-    }
+    };
 
     fetchData();
-  }, []);
+  }, [router]);
 
-  if (loading) return <div>Loading...</div>
-  if (error) return <div>{error}</div>
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <span className="text-sm text-muted-foreground">Loading jobs...</span>
+      </div>
+    );
+  }
 
   return (
-    <div className="m-0 p-0 max-w-full max-h-full">
-      <form onSubmit={(e) => handelSubmit(e)} className="flex flex-col border-2 p-2 m-2 justify-items-center w-lvw">
-        <div className="flex flex-row">
-          <label>Title</label>
-          <p className="text-red-500"> *</p>
-        </div>
-        <input name='title' id="title" type="text" placeholder="Enter Title" className="border-2" value={form.title}
-          onChange={(e) =>
-            setForm(prev => ({ ...prev, title: e.target.value }))
-          } />
-        <div className="flex flex-row">
-          <label>Description</label>
-          <p className="text-red-500">*</p>
-        </div>
-        <input name='description' id="description" type="text" placeholder="Enter Description" className="border-2" value={form.description}
-          onChange={(e) =>
-            setForm(prev => ({ ...prev, description: e.target.value }))
-          } />
-        <div className="flex flex-row">
-          <label>Date</label>
-          <p className="text-red-500">*</p>
-        </div>
-        <input name='closesAt' id="closesAt" type="datetime-local" placeholder="Enter Date" className="border-2" value={form.closesAt}
-          onChange={(e) =>
-            setForm(prev => ({ ...prev, closesAt: e.target.value }))
-          } />
-        <button type="submit" className="bg-green-500 m-2 p-2 justify-center hover:bg-green-700" disabled={jobSubmit}>{editingId ? "Update Job": "Add Job"}</button>
-      </form>
-      {submitError && <div className={submitError ? "bg-red-500 text-white" : 'invisible'}>{submitError}</div>}
+    <div className="min-h-screen bg-background">
+      <main className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-8 md:flex-row">
+        <section className="w-full md:w-2/5">
+          <Card className="shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-lg">
+                {editingId ? "Edit job" : "Create a new job"}
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Provide clear, detailed information so students can understand the opportunity.
+              </CardDescription>
+            </CardHeader>
 
-      {createState && !submitError && (<div className={createState ? 'bg-green-600 text-white' : 'invisible'}>{createState}</div>)}
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-1">
+                  <label htmlFor="title" className="flex items-center text-sm font-medium">
+                    <span>Title</span>
+                    <span className="ml-1 text-destructive">*</span>
+                  </label>
+                  <Input
+                    name="title"
+                    id="title"
+                    type="text"
+                    placeholder="e.g. Backend Intern - Summer 2026"
+                    value={form.title}
+                    onChange={(e) =>
+                      setForm((prev) => ({ ...prev, title: e.target.value }))
+                    }
+                  />
+                </div>
 
-      <div>
-        <div className="gap-y-3">
-          {jobs.map(job => (
-            <div key={job._id} className="m-2 p-2 border-2">
-              <div>{job.title}</div>
-              <div>{job.description}</div>
-              <div className="flex flex-row">
-                <div>{job.applicationCount}</div>
-                <div>{job.closesAt.slice(0, 9)}</div>
-              </div>
-              <button type="button" onClick={() => handleEdit(job)}>Edit</button>
+                <div className="space-y-1">
+                  <label
+                    htmlFor="description"
+                    className="flex items-center text-sm font-medium"
+                  >
+                    <span>Description</span>
+                    <span className="ml-1 text-destructive">*</span>
+                  </label>
+                  <Textarea
+                    name="description"
+                    id="description"
+                    placeholder="Describe the role, responsibilities, and what you are looking for in a candidate."
+                    value={form.description}
+                    onChange={(e) =>
+                      setForm((prev) => ({ ...prev, description: e.target.value }))
+                    }
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label
+                    htmlFor="closesAt"
+                    className="flex items-center text-sm font-medium"
+                  >
+                    <span>Application deadline</span>
+                    <span className="ml-1 text-destructive">*</span>
+                  </label>
+                  <Input
+                    name="closesAt"
+                    id="closesAt"
+                    type="datetime-local"
+                    placeholder="Select closing date and time"
+                    value={form.closesAt}
+                    onChange={(e) =>
+                      setForm((prev) => ({ ...prev, closesAt: e.target.value }))
+                    }
+                  />
+                </div>
+
+                {submitError && (
+                  <Alert variant="error">{submitError}</Alert>
+                )}
+
+                {createState && !submitError && (
+                  <Alert variant="success">{createState}</Alert>
+                )}
+
+                <Button type="submit" className="w-full" disabled={jobSubmit}>
+                  {jobSubmit
+                    ? editingId
+                      ? "Updating job..."
+                      : "Creating job..."
+                    : editingId
+                    ? "Update job"
+                    : "Add job"}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          {error && (
+            <div className="mt-4">
+              <Alert variant="error">{error}</Alert>
             </div>
-          ))}
-        </div>
-      </div>
+          )}
+        </section>
+
+        <section className="w-full md:w-3/5">
+          <Card className="h-full shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-lg">Current jobs</CardTitle>
+              <CardDescription className="text-xs">
+                Edit an existing job by selecting it from the list.
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="space-y-3">
+              {jobs.length === 0 && (
+                <Alert variant="info">
+                  You haven&apos;t created any jobs yet.
+                </Alert>
+              )}
+
+              {jobs.map((job) => (
+                <Card
+                  key={job._id}
+                  className="cursor-pointer border border-border/80 transition hover:border-primary/40"
+                  onClick={() => handleEdit(job)}
+                >
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-base">{job.title}</CardTitle>
+                      <Badge variant="outline" className="text-[10px]">
+                        {job.applicationCount} applications
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-1 text-xs text-muted-foreground">
+                    <p className="line-clamp-2">{job.description}</p>
+                    <p>
+                      Closes on{" "}
+                      <span className="font-medium">
+                        {job.closesAt.slice(0, 10)}
+                      </span>
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
+            </CardContent>
+
+            <CardFooter />
+          </Card>
+        </section>
+      </main>
     </div>
-  )
+  );
 }
+

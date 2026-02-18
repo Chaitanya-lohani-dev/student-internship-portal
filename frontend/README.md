@@ -1,36 +1,107 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## Frontend – Student Internship Portal
 
-## Getting Started
+This is the Next.js frontend for the **Student Internship Portal**.  
+It provides separate experiences for **students** and **admins** on top of the Express.js backend.
 
-First, run the development server:
+---
+
+## Tech Stack
+
+- **Framework**: Next.js (App Router, React)
+- **Styling**: Tailwind CSS v4, shadcn/ui-inspired components
+- **Forms & Validation**: Zod
+- **HTTP Client**: Axios
+- **File Uploads**: EdgeStore (for resume uploads)
+
+---
+
+## Prerequisites
+
+- Node.js **18+**
+- Backend running at `http://localhost:3001/api`  
+  (see `../backend/Readme.md` for backend setup)
+
+---
+
+## Environment
+
+Create `frontend/.env.local` if needed for your EdgeStore or other frontend-only config.  
+The current setup expects the backend at `http://localhost:3001/api` as configured in `lib/api.ts`.
+
+---
+
+## Install & Run (Development)
+
+From the `frontend` directory:
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The app will run at: `http://localhost:3000`
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Build & Run (Production)
 
-## Learn More
+```bash
+npm run build
+npm start
+```
 
-To learn more about Next.js, take a look at the following resources:
+By default this also runs on `http://localhost:3000`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Main Routes
 
-## Deploy on Vercel
+### Student
+- `GET /student/jobs` – Browse open internships.
+- `GET /student/[jobId]` – View job detail and **upload resume** to apply.
+- `GET /student/applications` – View and delete own applications.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Admin
+- `GET /admin` – Admin dashboard entry point.
+- `GET /admin/jobs` – List jobs you manage and their application counts.
+- `GET /admin/jobs/new` – Create and edit jobs in a unified form.
+- `GET /admin/jobs/applications/[jobId]` – Review and update application status for a job.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Auth and role-based access are enforced by the backend using JWTs and refresh tokens; this frontend uses Axios with interceptors to attach and refresh access tokens.
+
+---
+
+## Project Structure (Frontend)
+
+Key parts of the `frontend` folder:
+
+```text
+frontend/
+├── app/
+│   ├── admin/                # Admin dashboard and job management
+│   ├── student/              # Student-facing pages (jobs, job detail, applications)
+│   ├── login/                # Login page
+│   ├── register/             # Registration page
+│   └── layout.tsx            # Root layout (fonts, providers)
+├── components/
+│   ├── Navbar.tsx            # Student navbar with logout
+│   ├── JobListSkeleton.tsx   # Skeleton for loading job lists
+│   └── ui/                   # Reusable UI primitives (card, button, input, alert, badge, skeleton, textarea)
+├── lib/
+│   ├── api.ts                # Axios instance + typed backend API wrappers
+│   ├── edgestore.ts          # EdgeStore provider and hook
+│   └── utils.ts              # `cn` helper for className merging
+└── app/globals.css           # Tailwind & design tokens
+```
+
+---
+
+## Notes for Future (Phase 2)
+
+Phase 2 will focus on:
+
+- Event-driven patterns between backend services
+- Client-side data caching (e.g. React Query/SWR) for jobs and applications
+- More advanced error handling, toasts, and observability
+- Additional admin/student features on top of this foundation
+

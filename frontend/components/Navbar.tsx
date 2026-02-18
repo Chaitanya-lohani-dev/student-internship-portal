@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { logoutAPI } from '@/app/lib/api';
+import { logoutAPI } from '@/lib/api';
 
 export default function Navbar() {
     const router = useRouter()

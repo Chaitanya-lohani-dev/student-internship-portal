@@ -4,17 +4,13 @@ WORKDIR /frontend
 
 COPY package*.json ./
 COPY package-lock.json ./
-COPY .Dockerignore ./
 
 RUN npm install
 
-COPY next.config.ts next.config.ts
-COPY eslint.config.mjs eslint.config.mjs
-COPY next-env.d.ts next-env.d.ts
-COPY postcss.config.mjs postcss.config.mjs
-COPY tsconfig.json tsconfig.json
-COPY ./app ./app
-COPY ./public ./public
+COPY . .
+
+ENV EDGE_STORE_ACCESS_KEY=dummy_access_key
+ENV EDGE_STORE_SECRET_KEY=dummy_secret_key
 
 RUN npm run build
 
