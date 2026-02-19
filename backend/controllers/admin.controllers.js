@@ -1,5 +1,5 @@
-import Application from '../models/application.js';
-import Job from '../models/job.js';
+import Application from '../models/Application.js';
+import Job from '../models/Job.js';
 import { z } from 'zod';
 import client from '../config/redis.js';
 
