@@ -16,7 +16,7 @@ async function initDB() {
         await mongoose.connect(MONGODB_URI);
         console.log('Connected to MongoDB');
 
-        const {default: User} = await import('../models/user.js');
+        const {default: User} = await import('../models/User.js');
 
         const existingAdmin = await User.findOne({email: ADMIN_EMAIL});
         if (existingAdmin) {
