@@ -6,13 +6,13 @@ import client from '../config/redis.js';
 const createJobSchema = z.object({
     title: z.string().min(10),
     description: z.string().min(200),
-    closesAt: z.string().datetime()
+    closesAt: z.string().min(1)
 })
 
 const updateJobSchema = z.object({
     title: z.string().min(10).optional(),
     description: z.string().min(200).optional(),
-    closesAt: z.string().datetime().optional()
+    closesAt: z.string().min(1).optional()
 })
 
 const updateApplicationSchema = z.object({
@@ -26,8 +26,8 @@ export const createJob = async(req, res) => {
         if(!validation.success) {
             return res.status(400).json({message: 'Invalid Data', error: validation.error})
         }
-    
-        const {title, description, closesAt} = validation.data;
+        const {title, description} = validation.data;
+        const closesAt = new Date(validation.data.closesAt);
     
         await Job.create({
             title,
