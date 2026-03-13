@@ -80,7 +80,7 @@ export const login = async (req, res) => {
     
         res.status(200)
         .cookie('refreshToken', refreshToken, secureOptions)
-        .json({'accessToken': accessToken})
+        .cookie('accessToken', accessToken, secureOptions)
     } catch (error) {
         console.error("Some Error occurred: ", error);
         res.status(500).json({message: 'Internal Server error'})
@@ -104,6 +104,7 @@ export const logout = async (req, res) => {
 
     return res.status(200)
     .clearCookie('refreshToken', secureOptions)
+    .clearCookie('accessToken', secureOptions)
     .json({message: 'User Logedout Successfully'})
 }
 
@@ -133,11 +134,8 @@ export const refresh = async (req, res) => {
 
       return res
         .status(401)
-        .clearCookie("refreshToken", {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: "strict"
-        })
+        .clearCookie("refreshToken",secureOptions)
+        .clearCookie("accessToken",secureOptions)
         .json({ message: "Unauthorized" });
     }
 
@@ -151,7 +149,9 @@ export const refresh = async (req, res) => {
 
     res
       .cookie("refreshToken", newRefreshToken, secureOptions)
-      .json({ accessToken: newAccessToken });
+      .cookie("accessToken", newAccessToken, secureOptions)
+      .status(200)
+      .json({ message: "Token refreshed successfully" });
 
   } catch (error) {
     console.error("Some Error occurred: ", error);

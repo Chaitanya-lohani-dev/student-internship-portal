@@ -1,14 +1,50 @@
+![Node.js](https://img.shields.io/badge/Node.js-Backend-green)
+![MongoDB](https://img.shields.io/badge/MongoDB-Database-green)
+![Redis](https://img.shields.io/badge/Redis-Caching-red)
+![Next.js](https://img.shields.io/badge/Next.js-Frontend-black)
+
 # Student Internship Portal
 
-A full-stack internship management platform where:
+A production-oriented full-stack platform designed to help students discover legitimate internships while enabling administrators to manage job listings and applications efficiently.
 
-- Students can browse internships and apply
-- Admins can create and manage job postings
-- Applications are reviewed and updated by admins
-- Secure authentication with JWT + refresh tokens
-- Rate limiting and Redis caching for performance
+This project focuses on building **secure authentication, scalable backend APIs, and production-ready infrastructure patterns**.
+
+It was built as a practical exploration of **backend architecture, authentication systems, and deployment workflows**.
+
+## Live Demo
+
+Frontend  
+http://72.61.243.51
+
+Backend API  
+http://72.61.243.51/api
+
+## System Architecture
+```mermaid
+flowchart TD
+
+Users --> Nginx
+Nginx --> Frontend
+
+Frontend --> Backend
+
+Backend --> Redis
+Backend --> MongoDB
+
+Backend --> AuthService
+AuthService --> MongoDB
+```
 
 ---
+## Engineering Highlights
+
+• JWT authentication with refresh token rotation  
+• Role-based authorization system (Student / Admin)  
+• Redis caching layer for frequently accessed resources  
+• Rate limiting for API protection  
+• Modular backend architecture using Express  
+• Input validation with Zod  
+• Full-stack architecture using Next.js App Router
 
 ## Features
 
@@ -29,12 +65,13 @@ A full-stack internship management platform where:
 - View applications per job
 - Review and update application status
 
-### Performance & Security
-- Redis caching for heavy read routes
-- Manual cache invalidation on writes
-- Rate limiting with Redis
-- CORS protection
-- Input validation using Zod
+## Security Considerations
+
+• JWT access tokens with refresh token rotation  
+• HTTP-only secure cookies for authentication  
+• Rate limiting to prevent abuse  
+• Input validation with Zod schemas  
+• CORS protection
 
 ---
 
@@ -59,17 +96,28 @@ A full-stack internship management platform where:
 ```
 student-internship-portal/
 ├── backend/
-│ ├── controllers/
-│ ├── routes/
-│ ├── middleware/
-│ ├── models/
-│ ├── config/
+│ ├── controllers/ # Core Business logic
+│ ├── routes/ # API route defiations
+│ ├── middleware/ # Auth, validation, rate limiting
+│ ├── models/ # MongoDB schemas
+│ ├── config/ # Redis and database configs
 │ └── server.js
 └── frontend/
    ├── app/              # Next.js routes (admin, student, auth)
    ├── components/       # Shared components and UI primitives
    └── lib/              # API client, EdgeStore, utilities
 ```
+---
+## Deployment
+
+The platform is deployed using a VPS environment with containerized services.
+
+Infrastructure includes:
+
+• Docker containers for backend services  
+• Redis container for caching and rate limiting  
+• Nginx reverse proxy for routing and security  
+• MongoDB database for persistent storage
 
 ---
 
