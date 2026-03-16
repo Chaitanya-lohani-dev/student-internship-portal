@@ -6,7 +6,7 @@ import generateAccessToken from '../utils/generateAccessToken.js';
 import generateRefreshToken from '../utils/generateRefreshToken.js';
 import hashToken from '../utils/hashToken.js';
 
-const secureOptions = {secure: process.env.NODE_ENV ==='production', httpOnly: false,  sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax'}
+const secureOptions = {secure: process.env.NODE_ENV ==='production', httpOnly: true,  sameSite: 'lax', path: '/'}
 
 const registerSchema = z.object({
     name: z.string().min(3),
@@ -79,8 +79,9 @@ export const login = async (req, res) => {
         )
     
         res.status(200)
-        .cookie('refreshToken', refreshToken, secureOptions)
-        .cookie('accessToken', accessToken, secureOptions)
+        .cookie('refreshToken', refreshToken, { ...secureOptions, maxAge: 30*24*60*60*1000})
+        .cookie('accessToken', accessToken, { ...secureOptions, maxAge: 15*60*1000})
+        .json({message: 'User Loged in Successfully'})
     } catch (error) {
         console.error("Some Error occurred: ", error);
         res.status(500).json({message: 'Internal Server error'})
@@ -88,24 +89,29 @@ export const login = async (req, res) => {
 }
 
 export const logout = async (req, res) => {
-    const refreshToken = req.cookies.refreshToken;
-    if (!refreshToken) {
-        return res.status(401).json({ message: "Unauthorized" });
-    }
-
-    const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+    try {
+        const refreshToken = req.cookies.refreshToken;
+        if (!refreshToken) {
+            return res.status(401).json({ message: "Unauthorized" });
+        }
     
-    const { userId } = decoded;
-
-    await User.findByIdAndUpdate(
-        userId,
-        {refreshToken: undefined}
-    )
-
-    return res.status(200)
-    .clearCookie('refreshToken', secureOptions)
-    .clearCookie('accessToken', secureOptions)
-    .json({message: 'User Logedout Successfully'})
+        const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+        
+        const { userId } = decoded;
+    
+        await User.findByIdAndUpdate(
+            userId,
+            {refreshToken: undefined}
+        )
+    
+        return res.status(200)
+        .clearCookie('refreshToken', secureOptions)
+        .clearCookie('accessToken', secureOptions)
+        .json({message: 'User Logedout Successfully'})
+    } catch (error) {
+        console.error("Some Error occurred: ", error);
+        return res.status(401).json({ message: "Internal Server error" });
+    }
 }
 
 export const refresh = async (req, res) => {
@@ -148,8 +154,8 @@ export const refresh = async (req, res) => {
     });
 
     res
-      .cookie("refreshToken", newRefreshToken, secureOptions)
-      .cookie("accessToken", newAccessToken, secureOptions)
+      .cookie("refreshToken", newRefreshToken, { ...secureOptions, maxAge: 30*24*60*60*1000 })
+      .cookie("accessToken", newAccessToken, { ...secureOptions, maxAge: 15*60*1000 })
       .status(200)
       .json({ message: "Token refreshed successfully" });
 

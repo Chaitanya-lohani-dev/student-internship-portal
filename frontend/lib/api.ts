@@ -1,19 +1,10 @@
 import axios from "axios";
 
-// some setup for axios
+
 const api = axios.create({
     baseURL:  process.env.NEXT_PUBLIC_API_URL ? `${process.env.NEXT_PUBLIC_API_URL}/api` : 'http://localhost:3001/api',
     withCredentials: true
 });
-
-let accessToken: string | null = null;
-
-api.interceptors.request.use((config) => {
-    if(accessToken) {
-        config.headers = config.headers || {} ;
-        config.headers.Authorization = `Bearer ${accessToken}`
-    } return config;
-}, (error) => Promise.reject(error))
 
 api.interceptors.response.use(res => res,
     async (error) => {
@@ -26,12 +17,12 @@ api.interceptors.response.use(res => res,
         if (error.response?.status === 401 && !originalRequest._retry) {
             originalRequest._retry  = true;
 
-            const newtoken  = await refreshTokenAPI();
-            if(newtoken) {
-                originalRequest.headers = originalRequest.headers || {};
-                originalRequest.headers.Authorization = `Bearer ${newtoken}`;
+            const newres  = await refreshTokenAPI();
+            if(newres && newres.status === 200) {
                 return api(originalRequest);
             }
+
+            window.location.href = '/login';
         }
         return Promise.reject(error);
     }
@@ -45,8 +36,6 @@ export const loginAPI = async(email: string, password: string) => {
             password: password
         });
         
-        accessToken = res.data.accessToken;
-        
         if (res.status === 200) {
             return 'loginSuccess'; 
         }
@@ -57,7 +46,6 @@ export const loginAPI = async(email: string, password: string) => {
 
 export const logoutAPI = async() => {
     try {
-        accessToken = null;
         const res = await api.post('/auth/logout');
         return res;
     } catch (error) {
@@ -82,10 +70,8 @@ export const registerAPI = async(name:string, email: string, password: string) =
 export const refreshTokenAPI = async() => {
     try {
         const res = await api.post('/auth/refresh-token');
-        accessToken = res.data.accessToken;
-        return accessToken;
+        return res;
     } catch (error) {
-        accessToken = null;
         return null;
     }
 }

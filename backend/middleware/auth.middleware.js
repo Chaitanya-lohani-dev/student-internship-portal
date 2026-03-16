@@ -1,14 +1,13 @@
 import jwt from 'jsonwebtoken';
 
 export const authMiddleware = (req, res, next) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    try {
+    const accessToken = req.cookies.accessToken;
+
+    if (!accessToken) {
         return res.status(401).json({message: "Unauthorized"})
     }
-    try {
-        const token = authHeader.split(" ")[1]
-        
-        const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+        const decoded = jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET);
         req.user = {
             userId: decoded.userId,
             email: decoded.email,
@@ -17,6 +16,9 @@ export const authMiddleware = (req, res, next) => {
         
         next();
     } catch (error) {
-        return res.status(401).json({message: "Invalid or expired Token"})
+        if (error.name === "TokenExpiredError") {
+            return res.status(401).json({ message: "Access token expired" });
+        }
+        return res.status(401).json({ message: "Invalid token" });
     }
 }
