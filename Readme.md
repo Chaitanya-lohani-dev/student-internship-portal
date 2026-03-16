@@ -31,8 +31,6 @@ Frontend --> Backend
 Backend --> Redis
 Backend --> MongoDB
 
-Backend --> AuthService
-AuthService --> MongoDB
 ```
 
 ---
