@@ -5,8 +5,6 @@ import cookieParser from "cookie-parser";
 import authRoutes from "./routes/auth.route.js";
 import adminRoutes from './routes/admin.route.js';
 import studentRoutes from './routes/student.route.js'
-import client from "./config/redis.js";
-import { rateLimiter } from "./middleware/rateLimiter.middleware.js";
 import cors from 'cors';
 import { errorHandler } from "./middleware/errorHandler.middleware.js";
 
@@ -25,7 +23,6 @@ app.get("/health", (_, res) => {
     res.status(200).json({message: 'all Systems normal'})
 })
 
-app.use(rateLimiter(client));
 app.use('/api/auth', authRoutes)
 app.use('/api/admin', adminRoutes)
 app.use('/api/student', studentRoutes)
