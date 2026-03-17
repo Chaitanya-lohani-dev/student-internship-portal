@@ -96,8 +96,11 @@ export const delApplication = async (req, res) => {
         if (!application) {
             return res.status(404).json({ message: 'No Such application exists' })
         }
-
-        await Application.findOneAndDelete({ _id: application._id })
+        
+        if (application.userId.toString() !== req.user.userId) {
+            return res.status(403).json({message: "User cannot perform this action"})
+        }
+        await application.deleteOne()
         await Job.findByIdAndUpdate({_id: application.jobId}, { $inc: { applicationCount: -1 } });
 
         await client.del(`students:applications:${req.user.userId}`)
