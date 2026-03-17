@@ -10,26 +10,19 @@ const jobSchema = new mongoose.Schema({
         required: true
     },
     createdBy: {
-        type: String,
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
         required: true
-    },
-    createdAt: {
-        type: Date,
-        required: true,
-        default: Date.now()
     },
     closesAt: {
         type: Date,
         required: true
     },
-    lastUpdated: {
-        type: Date
-    },
     applicationCount: {
         type: Number,
         default: 0
     }
-});
+},{timestamps: true});
 
 const Job = mongoose.model("Job", jobSchema);
 

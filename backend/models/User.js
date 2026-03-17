@@ -19,9 +19,14 @@ const userSchema = new mongoose.Schema({
         enum : ['student', 'admin'],
         default: 'student'
     },
-    refreshToken: {
-        type: String
-    }
+    refreshSessions: [{
+        _id: false,
+        sessionId: {type: String, required: true},
+        refreshTokenHash: {type: String, required: true},
+        userAgent: {type: String},
+        userIp: {type: String},
+        expiresAt: {type: Date, required: true}
+    }]
 },{timestamps: true}); 
 
 const User = mongoose.model("User", userSchema);

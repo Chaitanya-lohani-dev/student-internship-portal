@@ -2,21 +2,18 @@ import mongoose from "mongoose";
 
 const applicationSchema = new mongoose.Schema({
     userId: {
-        type: String,
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
         required: true,
     },
     jobId: {
-        type: String,
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Job',
         required: true
     }, 
     resume: {
         type: String,
         required: true
-    },
-    appliedAt: {
-        type: Date,
-        required: true,
-        default: Date.now()
     },
     status: {
         type: String,
@@ -25,8 +22,10 @@ const applicationSchema = new mongoose.Schema({
         required: true
     },
     reviewedAt: { type: Date},
-    reviewedBy: { type: String}
-}); 
+    reviewedBy: { type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }
+}, {timestamps: true}); 
 
 applicationSchema.index(
   { userId: 1, jobId: 1 },
