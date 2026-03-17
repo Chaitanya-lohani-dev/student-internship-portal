@@ -1,8 +1,8 @@
 import jwt from 'jsonwebtoken';
 
-export default function generateRefreshToken (userId) {
+export default function generateRefreshToken (userId, sessionId) {
     return jwt.sign(
-        { userId },
+        { userId, sessionId },
         process.env.REFRESH_TOKEN_SECRET,
         {
             expiresIn: '30d'
