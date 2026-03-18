@@ -110,7 +110,7 @@ export const login = async (req, res) => {
         ...secureOptions,
         maxAge: 15 * 60 * 1000,
       })
-      .json({ message: "User Loged in Successfully" });
+      .json({ message: "User Loged in Successfully", role: user.role });
   } catch (error) {
     console.error("Some Error occurred: ", error);
     res.status(500).json({ message: "Internal Server error" });

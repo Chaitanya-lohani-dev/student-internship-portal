@@ -37,10 +37,10 @@ export const loginAPI = async(email: string, password: string) => {
         });
         
         if (res.status === 200) {
-            return 'loginSuccess'; 
+            return { role: res.data.role };
         }
     } catch (error) {
-        return "Error Login"    
+        throw new Error("Error occurred while logging in");
     }
 }
 

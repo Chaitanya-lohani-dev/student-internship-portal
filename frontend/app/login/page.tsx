@@ -15,15 +15,17 @@ const loginSchema = z.object({
   password: z.string().min(6),
 });
 
+type LoginResponse = { role: string };
+
 export default function Login() {
-  const [message, setMessage] = useState(null);
-  const [isError, setIsError] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [isError, setIsError] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [showPassword, setShowPassword] = useState<boolean>(false);
 
   const router = useRouter();
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setMessage(null);
     setIsError(false);
@@ -31,7 +33,7 @@ export default function Login() {
     try {
       setLoading(true);
 
-      const formData = new FormData(e.target);
+      const formData = new FormData(e.currentTarget);
       const data = Object.fromEntries(formData.entries());
       const validation = loginSchema.safeParse(data);
 
@@ -42,16 +44,23 @@ export default function Login() {
       }
 
       const { email, password } = validation.data;
-      const res = await loginAPI(email, password);
+      const res: LoginResponse | undefined = await loginAPI(email, password);
 
-      if (res === 'loginSuccess') {
+      if (res?.role === 'student') {
         setIsError(false);
         setMessage('Login successful. Redirecting to jobs...');
-        setTimeout(() => router.push('/student/jobs'), 800);
+        router.push('/student/jobs');
+      } else if (res?.role === 'admin') {
+        setIsError(false);
+        setMessage('Login successful. Redirecting to admin page...');
+        router.push('/admin');
       } else {
         setIsError(true);
         setMessage('Error trying to login. Please check your credentials and try again.');
       }
+    } catch (error) {
+      setIsError(true);
+      setMessage('An unexpected error occurred. Please try again later.');
     } finally {
       setLoading(false);
     }
