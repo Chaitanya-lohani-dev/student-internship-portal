@@ -41,15 +41,15 @@ export const getSingleJob = async (req, res) => {
 
 export const submitApplication = async (req, res) => {
     try {
-        const application = await Application.findOne({ jobId: req.params.id, userId: req.user.userId })
-        if (application) {
-            return res.status(409).json({ message: 'Application Already submitted' })
-        }
-
         const validation = submitApplicationSchema.safeParse(req.body);
 
         if (!validation.success) {
             return res.status(400).json({ message: "Invalid Data Type" })
+        }
+
+        const application = await Application.findOne({ jobId: req.params.id, userId: req.user.userId })
+        if (application) {
+            return res.status(409).json({ message: 'Application Already submitted' })
         }
 
         await Application.create({

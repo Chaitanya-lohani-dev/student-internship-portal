@@ -29,7 +29,7 @@ export const register = async (req, res) => {
     const validation = registerSchema.safeParse(req.body);
 
     if (!validation.success) {
-      return res.status(401).json({ message: "Invalid Details" });
+      return res.status(400).json({ message: "Invalid Details" });
     }
 
     const { name, email, password } = validation.data;
