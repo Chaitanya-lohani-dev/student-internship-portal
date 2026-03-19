@@ -50,4 +50,5 @@ uploads/
 .tmp
 .cache
 
-./nginx/certs/*
+/nginx/certs/*.crt
+/nginx/certs/*.key
