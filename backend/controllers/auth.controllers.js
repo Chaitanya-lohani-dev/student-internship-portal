@@ -83,6 +83,14 @@ export const login = async (req, res) => {
       expiresAt,
     } = generateUserSession(req, user._id);
 
+    await User.findByIdAndUpdate(user._id, {
+      $pull: {
+        refreshSessions: {
+          expiresAt: { $lt: new Date() } 
+        },
+      },
+    });
+
     await User.findByIdAndUpdate(
       user._id,
       {
@@ -94,8 +102,7 @@ export const login = async (req, res) => {
             userIp,
             expiresAt,
           },
-        },
-        $pull: { refreshSessions: { expiresAt: { $lt: new Date() } } },
+        }
       },
       { new: true },
     );
