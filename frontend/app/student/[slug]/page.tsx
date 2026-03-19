@@ -9,22 +9,30 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 
+type Job = {
+  _id: string;
+  title: string;
+  description: string;
+  closesAt: string;
+  updatedAt?: string;
+};
+
 export default function StudentJobPage() {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [file, setFile] = useState(null);
+  const [data, setData] = useState<Job | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
   const { edgestore } = useEdgeStore();
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [statusMessage, setStatusMessage] = useState(null);
-  const [statusError, setStatusError] = useState(null);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [statusError, setStatusError] = useState<string | null>(null);
 
   const params = useParams();
   const slug = Array.isArray(params.slug) ? params.slug[0] : params.slug;
 
   const router = useRouter();
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setStatusMessage(null);
     setStatusError(null);
@@ -32,6 +40,16 @@ export default function StudentJobPage() {
     try {
       if (!file) {
         setStatusError("Please upload your resume before submitting.");
+        return;
+      }
+
+      if (!slug) {
+        setStatusError("Job slug is missing. Please try again.");
+        return;
+      }
+      
+      if(file.size > 2*1024*1024) {
+        setStatusError("File size exceeds 2MB limit. Please upload a smaller file.");
         return;
       }
 
@@ -47,8 +65,16 @@ export default function StudentJobPage() {
       if (res.status === 201) {
         setStatusMessage("Successfully submitted the application.");
       }
-    } catch (error) {
-      if (error.response?.status === 409) {
+    } catch (error: unknown) {
+      const status =
+        typeof error === "object" &&
+        error !== null &&
+        "response" in error &&
+        typeof (error as { response?: { status?: number } }).response?.status === "number"
+          ? (error as { response?: { status?: number } }).response?.status
+          : undefined;
+
+      if (status === 409) {
         setStatusError("You have already applied for this job.");
       } else {
         setStatusError("Something went wrong while submitting. Please try again.");
@@ -57,12 +83,14 @@ export default function StudentJobPage() {
       setTimeout(() => {
         setStatusMessage(null);
         setStatusError(null);
+        setUploadProgress(0);
+        setFile(null);
       }, 2500);
     }
   };
 
   useEffect(() => {
-    const fetchData = async (slugValue) => {
+    const fetchData = async (slugValue: string) => {
       try {
         if (!slugValue) {
           setError("Something went wrong. Redirecting to job list...");
@@ -76,13 +104,21 @@ export default function StudentJobPage() {
         } else {
           setError("Unable to load this job. Please try again.");
         }
-      } catch (error) {
-        if (error.response?.status === 401) {
+      } catch (error: unknown) {
+        const status =
+          typeof error === "object" &&
+          error !== null &&
+          "response" in error &&
+          typeof (error as { response?: { status?: number } }).response?.status === "number"
+            ? (error as { response?: { status?: number } }).response?.status
+            : undefined;
+
+        if (status === 401) {
           setError("Session expired. Redirecting to login...");
           setTimeout(() => router.push("/login"), 500);
-        } else if (error.response?.status === 429) {
+        } else if (status === 429) {
           setError("Too many requests. Please try again after some time.");
-        } else if (error.response?.status === 404) {
+        } else if (status === 404) {
           setError("This job is no longer available.");
         } else {
           setError("Could not load the job details. Please try again.");
@@ -94,7 +130,9 @@ export default function StudentJobPage() {
       }
     };
 
-    fetchData(slug);
+    if (slug) {
+      fetchData(slug);
+    }
   }, [slug, router]);
 
   if (loading) {
@@ -113,6 +151,14 @@ export default function StudentJobPage() {
     );
   }
 
+  if (!data) {
+    return (
+      <div className="flex min-h-screen items-center justify-center px-4">
+        <Alert variant="error">Job data not found.</Alert>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -125,14 +171,14 @@ export default function StudentJobPage() {
               <p>{data.description}</p>
               <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                 <span>
-                  Closes on <span className="font-medium">{data.closesAt.slice(0, 10)}</span> at{" "}
-                  <span className="font-medium">{data.closesAt.slice(11, 16)}</span>
+                  Closes on <span className="font-medium">{new Date(data.closesAt).toLocaleDateString()}</span> at{" "}
+                  <span className="font-medium">{new Date(data.closesAt).toLocaleTimeString()}</span>
                 </span>
-                {data?.lastUpdated && (
+                {data?.updatedAt && (
                   <span>
                     Last updated on{" "}
-                    <span className="font-medium">{data.lastUpdated.slice(0, 10)}</span> at{" "}
-                    <span className="font-medium">{data.lastUpdated.slice(11, 16)}</span>
+                    <span className="font-medium">{new Date(data.updatedAt).toLocaleDateString()}</span> at{" "}
+                    <span className="font-medium">{new Date(data.updatedAt).toLocaleTimeString()}</span>
                   </span>
                 )}
               </div>

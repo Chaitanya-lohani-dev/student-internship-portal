@@ -40,7 +40,7 @@ export const loginAPI = async(email: string, password: string) => {
             return { role: res.data.role };
         }
     } catch (error) {
-        throw new Error("Error occurred while logging in");
+        throw error;
     }
 }
 
@@ -63,7 +63,7 @@ export const registerAPI = async(name:string, email: string, password: string) =
         
         return res.data;
     } catch (error) {
-        throw new Error("Some error occoured")
+        throw error;
     }
 }
 
@@ -80,7 +80,7 @@ export const refreshTokenAPI = async() => {
 export const getStudentJobs = async() => {
     try {
         const res = await api.get('/student/jobs')
-        return res.data
+        return res.data.data
     } catch (error) {
         throw error
     }
@@ -89,7 +89,7 @@ export const getStudentJobs = async() => {
 export const getStudentJob = async(id: string) => {
     try {
         const res = await api.get(`/student/jobs/${id}`)
-        return res.data;
+        return res.data.data;
     } catch (error) {
         throw error;
     }
@@ -109,7 +109,7 @@ export const submitApplication = async(id: string, cv: string) => {
 export const getStudentApplicationsAPI = async() => {
     try {
         const res = await api.get('/student/applications')
-        return res.data;
+        return res.data.data;
     } catch (error) {
         throw error;
     }
@@ -128,7 +128,7 @@ export const delApplicationAPI = async(id: string) => {
 export const getAdminJobs = async() => {
     try {
         const res = await api.get('/admin/jobs');
-        return res
+        return res.data.data;
     } catch (error) {
         throw error;
     }
@@ -137,7 +137,7 @@ export const getAdminJobs = async() => {
 export const getAdminApplications = async(id: string) => {
     try {
         const res = await api.get(`/admin/applications/${id}`);
-        return res.data;
+        return res.data.data;
     } catch (error) {
         throw error;
     }
@@ -148,7 +148,7 @@ export const adminUpdateApplicationStatus = async(id: string, update: string) =>
         const res = await api.patch(`/admin/applications/${id}`, {
             status: update
         });
-        return res
+        return res;
     } catch (error) {
         throw error;
     }

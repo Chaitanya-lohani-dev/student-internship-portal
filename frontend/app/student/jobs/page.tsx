@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-
 import { getStudentJobs } from "@/lib/api";
 import Navbar from "@/components/Navbar";
 import JobListSkeleton from "@/components/JobListSkeleton";
@@ -9,31 +8,46 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription }
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 
+type Job = {
+  _id: string;
+  title: string;
+  description: string;
+  applicationCount: number;
+};
+
 export default function StudentJobs() {
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [data, setData] = useState<Job[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
   const router = useRouter();
 
-  const handleClick = (id) => {
+  const handleClick = (id: string) => {
     router.push(`/student/${id}`);
   };
 
   useEffect(() => {
     const fetchdata = async () => {
       try {
-        const res = await getStudentJobs();
-        const jobsData = res.jobs;
+        const jobsData = await getStudentJobs();
 
         if (jobsData) {
           setData(jobsData);
         } else {
           setError("Error loading jobs. Please try again.");
         }
-      } catch (error) {
-        if (error.response?.status === 429) {
+      } catch (error: unknown) {
+        const status =
+          typeof error === "object" &&
+          error !== null &&
+          "response" in error &&
+          typeof (error as { response?: { status?: number } }).response?.status === "number"
+            ? (error as { response?: { status?: number } }).response?.status
+            : undefined;
+
+        if (status === 429) {
           setError("Too many requests. Try again after some time.");
-        } else if (error.response?.status === 401) {
+        } else if (status === 401) {
           setError("Session expired. Redirecting to login...");
           setTimeout(() => router.push("/login"), 400);
         } else {
@@ -45,7 +59,7 @@ export default function StudentJobs() {
     };
 
     fetchdata();
-  }, [router]);
+  }, []);
 
   if (loading) {
     return <JobListSkeleton />;
@@ -88,9 +102,7 @@ export default function StudentJobs() {
               <CardHeader>
                 <CardTitle className="line-clamp-1 text-lg">{job.title}</CardTitle>
                 <CardDescription className="line-clamp-2">
-                  {job.description.length > 160
-                    ? job.description.slice(0, 160) + "..."
-                    : job.description}
+                  {job.description}
                 </CardDescription>
               </CardHeader>
               <CardContent>

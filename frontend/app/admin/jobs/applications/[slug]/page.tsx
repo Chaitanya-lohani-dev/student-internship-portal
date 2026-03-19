@@ -13,7 +13,7 @@ type Applications = {
   userId: string;
   jobId: string;
   resume: string;
-  appliedAt: string;
+  createdAt: string;
   status: string;
 };
 
@@ -21,7 +21,7 @@ export default function Page() {
   const [applications, setApplications] = useState<Applications[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [updateLoading, setUpdateLoading] = useState<boolean>(false);
+  const [updateLoading, setUpdateLoading] = useState<string | null>(null);
   const [updateStatus, setUpdateStatus] = useState<string | null>(null);
   const [updateError, setUpdateError] = useState<string | null>(null);
 
@@ -32,7 +32,7 @@ export default function Page() {
 
   const handleClick = async (newStatus: string, id: string) => {
     try {
-      setUpdateLoading(true);
+      setUpdateLoading(id);
       setUpdateError(null);
       setUpdateStatus(null);
 
@@ -51,16 +51,19 @@ export default function Page() {
           )
         );
       }
-    } catch (error: any) {
-      if (error?.response?.status === 401) {
-        setUpdateError("Session expired. Please login again.");
-      } else if (error?.response?.status === 403) {
-        setUpdateError("Unauthorized.");
-      } else {
-        setUpdateError("Unable to update application status. Please try again.");
+    } catch (error: unknown) {
+      if (typeof error === "object" && error !== null && "response" in error) {
+        const err = error as { response?: { status?: number } };
+        if (err.response?.status === 401) {
+          setUpdateError("Session expired. Please login again.");
+        } else if (err.response?.status === 403) {
+          setUpdateError("Unauthorized.");
+        } else {
+          setUpdateError("Unable to update application status. Please try again.");
+        }
       }
     } finally {
-      setUpdateLoading(false);
+      setUpdateLoading(null);
       setTimeout(() => {
         setUpdateStatus(null);
         setUpdateError(null);
@@ -72,15 +75,17 @@ export default function Page() {
     const fetchData = async (slugValue: string | string[] | undefined) => {
       try {
         const res = await getAdminApplications(slugValue as string);
-        const apps = (res as any)?.data ?? res;
-        setApplications(apps);
-      } catch (error: any) {
-        if (error?.response?.status === 401) {
-          router.push("/login");
-        } else if (error?.response?.status === 403) {
-          router.push("/student/jobs");
-        } else {
-          setError("Something went wrong while loading applications.");
+        setApplications(res);
+      } catch (error: unknown) {
+        if (typeof error === "object" && error !== null && "response" in error) {
+          const err = error as { response?: { status?: number } };
+          if (err.response?.status === 401) {
+            router.push("/login");
+          } else if (err.response?.status === 403) {
+            router.push("/student/jobs");
+          } else {
+            setError("Something went wrong while loading applications.");
+          }
         }
       } finally {
         setLoading(false);
@@ -158,7 +163,7 @@ export default function Page() {
                 <p>
                   Applied on{" "}
                   <span className="font-medium">
-                    {new Date(application.appliedAt).toLocaleString()}
+                    {new Date(application.createdAt).toLocaleString()}
                   </span>
                 </p>
                 <p>
@@ -180,7 +185,7 @@ export default function Page() {
                   variant="outline"
                   size="sm"
                   onClick={() => handleClick("Selected", application._id)}
-                  disabled={updateLoading}
+                  disabled={updateLoading === application._id}
                 >
                   Mark as selected
                 </Button>
@@ -189,7 +194,7 @@ export default function Page() {
                   variant="destructive"
                   size="sm"
                   onClick={() => handleClick("Rejected", application._id)}
-                  disabled={updateLoading}
+                  disabled={updateLoading === application._id}
                 >
                   Mark as rejected
                 </Button>

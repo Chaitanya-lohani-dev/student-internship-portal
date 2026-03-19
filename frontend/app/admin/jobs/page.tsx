@@ -1,7 +1,6 @@
 'use client';
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-
 import { getAdminJobs } from "@/lib/api";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Alert } from "@/components/ui/alert";
@@ -28,18 +27,20 @@ export default function JobsPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await getAdminJobs();
-        const jobs = res.data.data as Jobs[];
+        const jobs = await getAdminJobs();
         setData(jobs);
-      } catch (error: any) {
-        if (error?.response?.status === 401) {
-          router.push("/login");
-        } else if (error?.response?.status === 403) {
-          setError("Forbidden. You are not allowed to view these jobs.");
-          setTimeout(() => router.push("/student/jobs"), 400);
-        } else {
-          setError("Something went wrong while loading jobs.");
-          console.error(error);
+      } catch (error: unknown) {
+        if (typeof error === "object" && error !== null && "response" in error) {
+          const err = error as { response?: { status?: number } };
+          if (err.response?.status === 401) {
+            router.push("/login");
+          } else if (err.response?.status === 403) {
+            setError("Forbidden. You are not allowed to view these jobs.");
+            setTimeout(() => router.push("/student/jobs"), 400);
+          } else {
+            setError("Something went wrong while loading jobs.");
+            console.error(error);
+          }
         }
       } finally {
         setLoading(false);
@@ -47,7 +48,7 @@ export default function JobsPage() {
     };
 
     fetchData();
-  }, [router]);
+  },[]);
 
   if (loading) {
     return (
@@ -92,9 +93,7 @@ export default function JobsPage() {
               <CardHeader>
                 <CardTitle className="text-lg">{job.title}</CardTitle>
                 <CardDescription className="line-clamp-2 text-sm">
-                  {job.description.length > 200
-                    ? job.description.slice(0, 200) + "..."
-                    : job.description}
+                  {job.description}
                 </CardDescription>
               </CardHeader>
               <CardContent>

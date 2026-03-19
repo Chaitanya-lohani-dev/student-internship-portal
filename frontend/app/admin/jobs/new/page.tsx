@@ -2,7 +2,6 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { z } from "zod";
-
 import { adminCreateJob, getAdminJobs, updateAdminJob } from "@/lib/api";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -75,54 +74,60 @@ export default function Page() {
         if (res.status === 200) {
           setCreateState("Job updated successfully.");
           const refreshed = await getAdminJobs();
-          setJobs(refreshed.data.data);
+          setJobs(refreshed);
         }
       } else {
         const res = await adminCreateJob(title, description, closesAt);
         if (res.status === 201) {
           setCreateState("Job created successfully.");
-          const refreshed = await getAdminJobs();
-          setJobs(refreshed.data.data);
+          const data = await getAdminJobs();
+          setJobs(data);
         }
       }
-    } catch (error: any) {
-      if (error?.response?.status === 400) {
-        setError("Unable to update job. Please check the details and try again.");
-      } else if (error?.response?.status === 401) {
-        setError("Session expired. Redirecting to login...");
-        setTimeout(() => router.push("/login"), 1000);
-      } else if (error?.response?.status === 403) {
-        setError("Unauthorized. Redirecting to student jobs...");
-        setTimeout(() => router.push("/student/jobs"), 1000);
-      } else {
-        setError("Some error occurred while processing your request.");
+      
+      setForm({
+        title: "",
+        description: "",
+        closesAt: "",
+      });
+      setEditingId(null);
+    } catch (error: unknown) {
+      if (typeof error === "object" && error !== null && "response" in error) {
+        const err = error as { response?: { status?: number } };
+        if (err.response?.status === 400) {
+          setError("Unable to update job. Please check the details and try again.");
+        } else if (err.response?.status === 401) {
+          setError("Session expired. Redirecting to login...");
+          setTimeout(() => router.push("/login"), 1000);
+        } else if (err.response?.status === 403) {
+          setError("Unauthorized. Redirecting to student jobs...");
+          setTimeout(() => router.push("/student/jobs"), 1000);
+        } else {
+          setError("Some error occurred while processing your request.");
+        }
       }
     } finally {
       setJobSubmit(false);
     }
-
-    setForm({
-      title: "",
-      description: "",
-      closesAt: "",
-    });
-    setEditingId(null);
   };
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await getAdminJobs();
-        setJobs(res.data.data);
-      } catch (error: any) {
-        if (error?.response?.status === 401) {
-          setError("Session expired.");
-          setTimeout(() => router.push("/login"), 1000);
-        } else if (error?.response?.status === 403) {
-          setError("Unauthorized.");
-          setTimeout(() => router.push("/student/jobs"), 1000);
-        } else {
-          setError("Some error occurred while processing request.");
+        const data = await getAdminJobs();
+        setJobs(data);
+      } catch (error: unknown) {
+        if (typeof error === "object" && error !== null && "response" in error) {
+          const err = error as { response?: { status?: number } };
+          if (err.response?.status === 401) {
+            setError("Session expired.");
+            setTimeout(() => router.push("/login"), 1000);
+          } else if (err.response?.status === 403) {
+            setError("Unauthorized.");
+            setTimeout(() => router.push("/student/jobs"), 1000);
+          } else {
+            setError("Some error occurred while processing request.");
+          }
         }
       } finally {
         setLoading(false);
@@ -275,7 +280,7 @@ export default function Page() {
                     <p>
                       Closes on{" "}
                       <span className="font-medium">
-                        {job.closesAt.slice(0, 10)}
+                        {new Date(job.closesAt).toLocaleDateString()}
                       </span>
                     </p>
                   </CardContent>

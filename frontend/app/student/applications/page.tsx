@@ -12,7 +12,7 @@ type Application = {
   _id: string;
   jobId: string;
   resume: string;
-  appliedAt: string;
+  createdAt: string;
   status: string;
 };
 
@@ -27,7 +27,6 @@ export default function StudentApplicationsPage() {
     e: React.MouseEvent<HTMLButtonElement>,
     id: string
   ) => {
-    e.preventDefault();
 
     if (!window.confirm("Are you sure you want to delete this application?")) {
       return;
@@ -50,20 +49,24 @@ export default function StudentApplicationsPage() {
   useEffect(() => {
     const getApplications = async () => {
       try {
-        const res = await getStudentApplicationsAPI();
-        setApplications(res.applications);
-      } catch (error: any) {
-        if (error.response?.status === 429) {
-          setError("Too many requests, try again later.");
-        } else if (error.response?.status === 401) {
-          setError("Session expired. Please login again.");
-        } else {
-          setError("Failed to load applications. Please try again.");
+        const applications = await getStudentApplicationsAPI();
+        setApplications(applications);
+      } catch (error: unknown) {
+        if (typeof error === "object" && error !== null && "response" in error) {
+          const err = error as { response?: { status?: number } };
+          if (err.response?.status === 429) {
+            setError("Too many requests, try again later.");
+          } else if (err.response?.status === 401) {
+            setError("Session expired. Please login again.");
+          } else {
+            setError("Failed to load applications. Please try again.");
+          }
         }
       } finally {
         setLoading(false);
-      }
+      };
     };
+
     getApplications();
   }, []);
 
@@ -110,7 +113,7 @@ export default function StudentApplicationsPage() {
                     Job ID: {application.jobId}
                   </CardTitle>
                   <CardDescription className="text-xs">
-                    Applied on {new Date(application.appliedAt).toLocaleString()}
+                    Applied on {new Date(application.createdAt).toLocaleString()}
                   </CardDescription>
                 </div>
                 <Badge
@@ -118,8 +121,8 @@ export default function StudentApplicationsPage() {
                     application.status === "Selected"
                       ? "success"
                       : application.status === "Rejected"
-                      ? "destructive"
-                      : "default"
+                        ? "destructive"
+                        : "default"
                   }
                 >
                   {application.status}

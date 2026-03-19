@@ -9,15 +9,15 @@ const submitApplicationSchema = z.object({
 
 export const getJobs = async (req, res) => {
     try {
-        let jobs = await client.get('student:jobs');
+        let data = await client.get('student:jobs');
 
-        if (jobs !== null) {
-            return res.status(200).json({ jobs: JSON.parse(jobs) });
+        if (data !== null) {
+            return res.status(200).json({ data: JSON.parse(data) });
         }
 
-        jobs = await Job.find({ closesAt: { $gt: new Date() } }).sort({ createdAt: -1 })
-        await client.set('student:jobs', JSON.stringify(jobs), { EX: 3600 })
-        res.status(200).json({ jobs })
+        data = await Job.find({ closesAt: { $gt: new Date() } }).sort({ createdAt: -1 })
+        await client.set('student:jobs', JSON.stringify(data), { EX: 3600 })
+        res.status(200).json({ data })
     } catch (error) {
         console.error("Some error occurred: ", error)
         res.status(500).json({ message: "Error fetching data" })
@@ -26,13 +26,13 @@ export const getJobs = async (req, res) => {
 
 export const getSingleJob = async (req, res) => {
     try {
-        const job = await Job.findOne({ _id: req.params.id, closesAt: { $gt: new Date() } })
+        const data = await Job.findOne({ _id: req.params.id, closesAt: { $gt: new Date() } })
 
-        if (!job) {
+        if (!data) {
             return res.status(404).json({ message: "Job not found or expired" })
         }
 
-        res.status(200).json(job)
+        res.status(200).json({ data })
     } catch (error) {
         console.error("Some error occurred: ", error)
         res.status(500).json({ message: "Some error occour" })
@@ -47,8 +47,8 @@ export const submitApplication = async (req, res) => {
             return res.status(400).json({ message: "Invalid Data Type" })
         }
 
-        const application = await Application.findOne({ jobId: req.params.id, userId: req.user.userId })
-        if (application) {
+        const data = await Application.findOne({ jobId: req.params.id, userId: req.user.userId })
+        if (data) {
             return res.status(409).json({ message: 'Application Already submitted' })
         }
 
@@ -75,15 +75,15 @@ export const submitApplication = async (req, res) => {
 
 export const getApplications = async (req, res) => {
     try {
-        let applications = await client.get(`students:applications:${req.user.userId}`);
+        let data = await client.get(`students:applications:${req.user.userId}`);
 
-        if (applications !== null) {
-            return res.status(200).json({ applications: JSON.parse(applications) })
+        if (data !== null) {
+            return res.status(200).json({ data: JSON.parse(data) })
         }
 
-        applications = await Application.find({ userId: req.user.userId })
-        await client.set(`students:applications:${req.user.userId}`, JSON.stringify(applications), { EX: 900 })
-        res.status(200).json({ applications })
+        data = await Application.find({ userId: req.user.userId })
+        await client.set(`students:applications:${req.user.userId}`, JSON.stringify(data), { EX: 900 })
+        res.status(200).json({ data })
     } catch (error) {
         console.error("Some error occurred: ", error)
         res.status(500).json({ message: "error geting data", error: error })
@@ -92,16 +92,16 @@ export const getApplications = async (req, res) => {
 
 export const delApplication = async (req, res) => {
     try {
-        const application = await Application.findById(req.params.id)
-        if (!application) {
+        const data = await Application.findById(req.params.id)
+        if (!data) {
             return res.status(404).json({ message: 'No Such application exists' })
         }
         
-        if (application.userId.toString() !== req.user.userId) {
+        if (data.userId.toString() !== req.user.userId) {
             return res.status(403).json({message: "User cannot perform this action"})
         }
-        await application.deleteOne()
-        await Job.findByIdAndUpdate({_id: application.jobId}, { $inc: { applicationCount: -1 } });
+        await data.deleteOne()
+        await Job.findByIdAndUpdate(data.jobId, { $inc: { applicationCount: -1 } });
 
         await client.del(`students:applications:${req.user.userId}`)
         res.status(200).json({ message: "Application Deleted Successfully" })
