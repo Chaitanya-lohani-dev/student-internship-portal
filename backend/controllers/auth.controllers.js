@@ -5,6 +5,7 @@ import User from "../models/User.js";
 import generateAccessToken from "../utils/generateAccessToken.js";
 import hashToken from "../utils/hashToken.js";
 import generateUserSession from "../utils/generateUserSession.js";
+import logger from "../config/logger.js";
 
 const secureOptions = {
   secure: process.env.NODE_ENV === "production",
@@ -37,6 +38,7 @@ export const register = async (req, res) => {
     const existingUser = await User.findOne({ email });
 
     if (existingUser) {
+      logger.warn(`Registration attempt with existing email: ${email}`);
       return res.status(409).json({ message: "User all ready exists" });
     }
 
@@ -46,7 +48,7 @@ export const register = async (req, res) => {
     await user.save();
     res.status(201).json({ message: "User Registered" });
   } catch (error) {
-    console.error("Some Error occurred: ", error);
+    logger.error("Some Error occurred: ", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -64,12 +66,14 @@ export const login = async (req, res) => {
     const user = await User.findOne({ email });
 
     if (!user) {
-      return res.status(401).json({ message: "Ivalid User please register" });
+      logger.warn(`Login attempt with non-existent email: ${email}`);
+      return res.status(401).json({ message: "Invalid User please register" });
     }
 
     const verified = await bcrypt.compare(password, user.password);
 
     if (!verified) {
+      logger.warn(`Login attempt with invalid password for email: ${email}`);
       return res.status(401).json({ message: "Unauthorized" });
     }
 
@@ -106,7 +110,8 @@ export const login = async (req, res) => {
       },
       { new: true },
     );
-
+    
+    logger.info(`User logged in: ${email}, Session ID: ${sessionId}, IP: ${userIp}, User Agent: ${userAgent}`);
     res
       .status(200)
       .cookie("refreshToken", refreshToken, {
@@ -119,7 +124,7 @@ export const login = async (req, res) => {
       })
       .json({ message: "User Loged in Successfully", role: user.role });
   } catch (error) {
-    console.error("Some Error occurred: ", error);
+    logger.error("Some Error occurred: ", error);
     res.status(500).json({ message: "Internal Server error" });
   }
 };
@@ -128,12 +133,14 @@ export const logout = async (req, res) => {
   try {
     const refreshToken = req.cookies.refreshToken;
     if (!refreshToken) {
+      logger.warn("Logout attempt without refresh token");
       return res.status(401).json({ message: "Unauthorized" });
     }
 
     const decoded = jwt.decode(refreshToken);
 
     if (!decoded?.userId || !decoded?.sessionId) {
+      logger.warn("Invalid refresh token format");
       return res.status(401).json({ message: "Unauthorized" });
     }
 
@@ -142,14 +149,14 @@ export const logout = async (req, res) => {
     await User.findByIdAndUpdate(userId, {
       $pull: { refreshSessions: { sessionId: sessionId } },
     });
-
+    logger.info(`User logged out: User ID: ${userId}, Session ID: ${sessionId}`);
     return res
       .status(200)
       .clearCookie("refreshToken", secureOptions)
       .clearCookie("accessToken", secureOptions)
       .json({ message: "User Logedout Successfully" });
   } catch (error) {
-    console.error("Some Error occurred: ", error);
+    logger.error("Some Error occurred: ", error);
     return res.status(401).json({ message: "Internal Server error" });
   }
 };
@@ -169,6 +176,7 @@ export const refresh = async (req, res) => {
 
     const user = await User.findById(decoded.userId);
     if (!user) {
+      logger.warn(`Refresh attempt with non-existent user ID: ${decoded.userId}`);
       return res.status(401).json({ message: "Unauthorized" });
     }
 
@@ -179,10 +187,12 @@ export const refresh = async (req, res) => {
     );
 
     if (!session || hashedIncomingToken !== session?.refreshTokenHash) {
+      logger.warn(`Invalid refresh token for user ID: ${decoded.userId}, Session ID: ${decoded.sessionId}`);
       await User.findByIdAndUpdate(decoded.userId, {
         $set: { refreshSessions: [] },
       });
-
+      
+      logger.warn(`Refresh attempt with invalid token for user ID: ${decoded.userId}, Session ID: ${decoded.sessionId}`);
       return res
         .status(401)
         .clearCookie("refreshToken", secureOptions)
@@ -222,7 +232,8 @@ export const refresh = async (req, res) => {
         },
       },
     });
-
+    logger.info(`Token refreshed for user ID: ${decoded.userId}, Session ID: ${sessionId}, IP: ${userIp}, User Agent: ${userAgent}`);
+    
     res
       .cookie("refreshToken", refreshToken, {
         ...secureOptions,
@@ -235,7 +246,7 @@ export const refresh = async (req, res) => {
       .status(200)
       .json({ message: "Token refreshed successfully" });
   } catch (error) {
-    console.error("Some Error occurred: ", error);
+    logger.error("Some Error occurred: ", error);
     return res
       .status(401)
       .json({ message: "Invalid or expired refresh token" });
