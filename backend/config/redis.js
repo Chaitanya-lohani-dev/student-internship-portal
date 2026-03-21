@@ -1,13 +1,14 @@
 import redis from "redis";
+import logger from "./logger.js";
 
 const client = redis.createClient({
     url: process.env.REDIS_URL || "redis://localhost:6379"
 });
 client.on("error", err => {
-    console.error("Redis error:", err)
-    process.exit(1);
+    logger.error("Redis error:", err)
 });
+
 await client.connect();
-console.log("Redis connected successfully");
+logger.info("Redis connected successfully");
 
 export default client;
