@@ -6,6 +6,7 @@ import authRoutes from "./routes/auth.route.js";
 import adminRoutes from './routes/admin.route.js';
 import studentRoutes from './routes/student.route.js'
 import cors from 'cors';
+import helmet from 'helmet';
 import { errorHandler } from "./middleware/errorHandler.middleware.js";
 import requestLogger from "./middleware/requestLogger.middleware.js";
 import logger from "./config/logger.js";
@@ -17,6 +18,7 @@ import logger from "./config/logger.js";
 const app = express();
 const port = process.env.PORT || 5000;
 
+app.use(helmet());
 app.use(cookieParser());
 app.use(express.json());
 app.use(cors({origin: process.env.ALLOWED_ORIGINS ||"http://localhost:3000", credentials: true}));
@@ -32,5 +34,5 @@ app.use('/api/student', studentRoutes)
 app.use(errorHandler);
 
 app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
+    logger.info(`Server is running on port ${port}`);
 })
