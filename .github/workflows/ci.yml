@@ -15,243 +15,125 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy:
-    name: Deploy To VPS
+  build-and-push:
+    name: Build & Push Images
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
         with:
-          fetch-depth: 0
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Detect changed areas
-        id: changes
-        shell: bash
+      - name: Build and push backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: chaitanyalohani/commitlog-backend:latest
+
+      - name: Build and push frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          tags: chaitanyalohani/commitlog-frontend:latest
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ secrets.ALLOWED_ORIGINS }}
+            EDGE_STORE_ACCESS_KEY=${{ secrets.EDGE_STORE_ACCESS_KEY }}
+            EDGE_STORE_SECRET_KEY=${{ secrets.EDGE_STORE_SECRET_KEY }}
+
+  deploy:
+    name: Deploy to VPS
+    runs-on: ubuntu-latest
+    needs: build-and-push
+
+    steps:
+      - name: Add SSH key
         run: |
-          set -euo pipefail
-
-          BEFORE_SHA="${{ github.event.before }}"
-          AFTER_SHA="${{ github.sha }}"
-
-          if [[ -z "${BEFORE_SHA}" || "${BEFORE_SHA}" == "0000000000000000000000000000000000000000" ]]; then
-            BEFORE_SHA="$(git rev-list --max-parents=0 HEAD)"
-          fi
-
-          CHANGED_FILES="$(git diff --name-only "${BEFORE_SHA}" "${AFTER_SHA}" || true)"
-
-          if [[ -z "${CHANGED_FILES}" ]]; then
-            CHANGED_FILES="No files changed detected"
-          fi
-
-          echo "changed_files<<EOF" >> "$GITHUB_OUTPUT"
-          echo "${CHANGED_FILES}" >> "$GITHUB_OUTPUT"
-          echo "EOF" >> "$GITHUB_OUTPUT"
-
-          has_match() {
-            local pattern="$1"
-            if echo "${CHANGED_FILES}" | grep -E -q "${pattern}"; then
-              echo "true"
-            else
-              echo "false"
-            fi
-          }
-
-          BACKEND_CHANGED="$(has_match '^(backend/|docker-compose\.yml$)')"
-          FRONTEND_CHANGED="$(has_match '^(frontend/|docker-compose\.yml$)')"
-          NGINX_CHANGED="$(has_match '^(nginx/|docker-compose\.yml$)')"
-          SHARED_CHANGED="$(has_match '^(docker-compose\.yml|backend/config/|backend/Dockerfile|frontend/Dockerfile)$')"
-
-          if [[ "${SHARED_CHANGED}" == "true" ]]; then
-            REBUILD_ALL="true"
-          else
-            REBUILD_ALL="false"
-          fi
-
-          echo "backend_changed=${BACKEND_CHANGED}" >> "$GITHUB_OUTPUT"
-          echo "frontend_changed=${FRONTEND_CHANGED}" >> "$GITHUB_OUTPUT"
-          echo "nginx_changed=${NGINX_CHANGED}" >> "$GITHUB_OUTPUT"
-          echo "rebuild_all=${REBUILD_ALL}" >> "$GITHUB_OUTPUT"
-
-      - name: Add SSH key and known hosts
-        shell: bash
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_PORT: ${{ secrets.VPS_PORT }}
-          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
-        run: |
-          set -euo pipefail
-
-          if [[ -z "${VPS_HOST}" || -z "${VPS_SSH_KEY}" ]]; then
-            echo "VPS_HOST and VPS_SSH_KEY secrets are required."
-            exit 1
-          fi
-
-          PORT="${VPS_PORT:-22}"
-
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-
-          printf '%s\n' "${VPS_SSH_KEY}" > ~/.ssh/id_rsa
+          printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -p ${{ secrets.VPS_PORT }} -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
 
-          ssh-keyscan -p "${PORT}" -H "${VPS_HOST}" >> ~/.ssh/known_hosts
-          chmod 644 ~/.ssh/known_hosts
-
-      - name: Deploy and verify on VPS
-        id: deploy
-        shell: bash
+      - name: Write .env and deploy
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USER: ${{ secrets.VPS_USER }}
           VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
           VPS_APP_DIR: ${{ secrets.VPS_APP_DIR }}
-          BACKEND_CHANGED: ${{ steps.changes.outputs.backend_changed }}
-          FRONTEND_CHANGED: ${{ steps.changes.outputs.frontend_changed }}
-          NGINX_CHANGED: ${{ steps.changes.outputs.nginx_changed }}
-          REBUILD_ALL: ${{ steps.changes.outputs.rebuild_all }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          GITHUB_SHA: ${{ github.sha }}
         run: |
+          ssh -p "${VPS_PORT}" "${VPS_USER}@${VPS_HOST}" "bash -s" <<EOF
           set -euo pipefail
 
-          if [[ -z "${VPS_HOST}" || -z "${VPS_USER}" || -z "${VPS_APP_DIR}" ]]; then
-            echo "VPS_HOST, VPS_USER, and VPS_APP_DIR secrets are required."
-            exit 1
-          fi
+          mkdir -p ${VPS_APP_DIR}
+          cd ${VPS_APP_DIR}
 
-          PORT="${VPS_PORT:-22}"
+          # Write .env file
+          cat > .env <<'ENVEOF'
+          ACCESS_TOKEN_SECRET=${{ secrets.ACCESS_TOKEN_SECRET }}
+          REFRESH_TOKEN_SECRET=${{ secrets.REFRESH_TOKEN_SECRET }}
+          ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }}
+          ADMIN_NAME=${{ secrets.ADMIN_NAME }}
+          ADMIN_EMAIL=${{ secrets.ADMIN_EMAIL }}
+          ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}
+          MONGODB_URL=${{ secrets.MONGODB_URL }}
+          REDIS_URL=${{ secrets.REDIS_URL }}
+          MONGO_USER=${{ secrets.MONGO_USER }}
+          MONGO_PASSWORD=${{ secrets.MONGO_PASSWORD }}
+          REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
+          EDGE_STORE_ACCESS_KEY=${{ secrets.EDGE_STORE_ACCESS_KEY }}
+          EDGE_STORE_SECRET_KEY=${{ secrets.EDGE_STORE_SECRET_KEY }}
+          ENVEOF
 
-          ssh -p "${PORT}" "${VPS_USER}@${VPS_HOST}" \
-            "APP_DIR='${VPS_APP_DIR}' REBUILD_ALL='${REBUILD_ALL}' BACKEND_CHANGED='${BACKEND_CHANGED}' FRONTEND_CHANGED='${FRONTEND_CHANGED}' NGINX_CHANGED='${NGINX_CHANGED}' REPO='${GITHUB_REPOSITORY}' SHA='${GITHUB_SHA}' bash -s" <<'EOF'
-          set -euo pipefail
+          # Write docker-compose.yml
+          cat > docker-compose.yml <<'COMPOSEEOF'
+          $(cat docker-compose.yml)
+          COMPOSEEOF
 
-          mkdir -p "${APP_DIR}"
-          cd "${APP_DIR}"
+          # Pull latest images and deploy
+          docker compose pull
+          docker compose up -d --remove-orphans
 
-          if [[ ! -d .git ]]; then
-            git clone "https://github.com/${REPO}.git" .
-          fi
-
-          git fetch origin
-          git checkout main
-          git pull --ff-only origin main
-
-          if [[ ! -f .env ]]; then
-            echo ".env file was not found on VPS at ${APP_DIR}."
-            exit 1
-          fi
-
-          docker compose pull || true
-
-          if [[ "${REBUILD_ALL}" == "true" ]]; then
-            echo "Shared infra changed. Rebuilding full stack."
-            docker compose up -d --build --remove-orphans
-          else
-            SERVICE_REBUILT="false"
-
-            if [[ "${BACKEND_CHANGED}" == "true" ]]; then
-              echo "Backend changes detected. Rebuilding backend."
-              docker compose up -d --build backend
-              SERVICE_REBUILT="true"
-            fi
-
-            if [[ "${FRONTEND_CHANGED}" == "true" ]]; then
-              echo "Frontend changes detected. Rebuilding frontend."
-              docker compose up -d --build frontend
-              SERVICE_REBUILT="true"
-            fi
-
-            if [[ "${NGINX_CHANGED}" == "true" ]]; then
-              echo "Nginx changes detected. Rebuilding nginx."
-              docker compose up -d --build nginx
-              SERVICE_REBUILT="true"
-            fi
-
-            if [[ "${SERVICE_REBUILT}" == "false" ]]; then
-              echo "No deployable service changes detected. Ensuring stack is up."
-              docker compose up -d --remove-orphans
-            fi
-          fi
-
-          echo "Container status after deployment:"
+          echo "Container status:"
           docker compose ps
 
+          # Health check
           HEALTH_OK="false"
           for i in {1..18}; do
-            if curl -fsS http://127.0.0.1/api/health >/dev/null 2>&1 || curl -fsS http://127.0.0.1:3001/api/health >/dev/null 2>&1; then
+            if curl -fsS http://127.0.0.1/api/health >/dev/null 2>&1; then
               HEALTH_OK="true"
               break
             fi
             sleep 5
           done
 
-          if [[ "${HEALTH_OK}" != "true" ]]; then
-            echo "Health check failed for /api/health"
-            docker compose logs --tail=120 backend || true
-            docker compose logs --tail=120 frontend || true
+          if [[ "\${HEALTH_OK}" != "true" ]]; then
+            echo "Health check failed"
+            docker compose logs --tail=50 backend || true
             exit 1
           fi
 
-          echo "Recent backend container logs:"
-          docker compose logs --tail=120 backend || true
-
-          echo "Recent frontend container logs:"
-          docker compose logs --tail=120 frontend || true
-
-          echo "Winston error log tail (if present in backend container):"
-          docker compose exec -T backend sh -lc 'if [ -f error.log ]; then tail -n 120 error.log; else echo "error.log not found"; fi' || true
-
-          echo "Winston combined log tail (if present in backend container):"
-          docker compose exec -T backend sh -lc 'if [ -f combined.log ]; then tail -n 120 combined.log; else echo "combined.log not found"; fi' || true
+          echo "Deploy successful"
           EOF
-
-      - name: Deployment summary
-        if: always()
-        shell: bash
-        run: |
-          {
-            echo "## VPS Deploy Summary"
-            echo ""
-            echo "- Backend changed: ${{ steps.changes.outputs.backend_changed }}"
-            echo "- Frontend changed: ${{ steps.changes.outputs.frontend_changed }}"
-            echo "- Nginx changed: ${{ steps.changes.outputs.nginx_changed }}"
-            echo "- Rebuild all: ${{ steps.changes.outputs.rebuild_all }}"
-            echo ""
-            echo "### Changed files"
-            echo '${{ steps.changes.outputs.changed_files }}'
-          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Create GitHub issue on failure
         if: failure()
         uses: actions/github-script@v7
-        env:
-          CHANGED_FILES: ${{ steps.changes.outputs.changed_files }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const shortSha = context.sha.substring(0, 7);
             const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            const title = `[Deploy Failure] main @ ${shortSha}`;
-            const body = [
-              "Automated deployment to VPS failed.",
-              "",
-              `- Repository: ${context.repo.owner}/${context.repo.repo}`,
-              `- Branch: ${context.ref}`,
-              `- Commit: ${context.sha}`,
-              `- Actor: ${context.actor}`,
-              `- Workflow run: ${runUrl}`,
-              "",
-              "Changed files:",
-              "```",
-              process.env.CHANGED_FILES || "No changed files detected",
-              "```"
-            ].join("\n");
-
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title,
-              body,
+              title: `[Deploy Failure] main @ ${shortSha}`,
+              body: `Deployment failed.\n\nRun: ${runUrl}`,
               labels: ["ci", "deployment", "bug"]
             });

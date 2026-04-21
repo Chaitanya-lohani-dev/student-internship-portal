@@ -8,10 +8,10 @@ services:
     depends_on:
       - frontend
       - backend
+      - n8n
 
   backend:
-    build: 
-      context: ./backend
+    image: chaitanyalohani/commitlog-backend:latest
     environment:
       PORT: 3001
       NODE_ENV: production
@@ -31,12 +31,7 @@ services:
     restart: unless-stopped
 
   frontend:
-    build: 
-      context: ./frontend
-      args:
-        NEXT_PUBLIC_API_URL: ${ALLOWED_ORIGINS}
-        EDGE_STORE_ACCESS_KEY: ${EDGE_STORE_ACCESS_KEY}
-        EDGE_STORE_SECRET_KEY: ${EDGE_STORE_SECRET_KEY}
+    image: chaitanyalohani/commitlog-frontend:latest
     environment:
       NEXT_PUBLIC_API_URL: ${ALLOWED_ORIGINS}
       EDGE_STORE_ACCESS_KEY: ${EDGE_STORE_ACCESS_KEY}
@@ -44,6 +39,18 @@ services:
     depends_on: 
       - backend
     restart: unless-stopped
+
+  n8n:
+    image: n8nio/n8n
+    restart: unless-stopped
+    environment:
+      - N8N_HOST=n8n.chaitanya-lohani.me
+      - WEBHOOK_URL=https://n8n.chaitanya-lohani.me
+      - N8N_PROTOCOL=https
+      - GENERIC_TIMEZONE=Asia/Kolkata
+      - N8N_PORT=5678
+    volumes:
+      - n8n_data:/home/node/.n8n
     
   mongo:
     image: mongo:8
@@ -74,3 +81,4 @@ services:
 volumes:
   mongo_data:
   redis_data:
+  n8n_data:
