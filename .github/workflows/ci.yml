@@ -64,50 +64,64 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -p ${{ secrets.VPS_PORT }} -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Write .env and deploy
+      - name: Copy files to VPS
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_PORT: ${{ secrets.VPS_PORT }}
           VPS_USER: ${{ secrets.VPS_USER }}
           VPS_APP_DIR: ${{ secrets.VPS_APP_DIR }}
         run: |
-          # Copy docker-compose.yml to VPS
           scp -P "${VPS_PORT}" docker-compose.yml "${VPS_USER}@${VPS_HOST}:${VPS_APP_DIR}/docker-compose.yml"
-
-          # Copy nginx folder to VPS
           scp -P "${VPS_PORT}" -r nginx "${VPS_USER}@${VPS_HOST}:${VPS_APP_DIR}/"
 
+      - name: Write .env and deploy
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_APP_DIR: ${{ secrets.VPS_APP_DIR }}
+          SECRET_ACCESS_TOKEN_SECRET: ${{ secrets.ACCESS_TOKEN_SECRET }}
+          SECRET_REFRESH_TOKEN_SECRET: ${{ secrets.REFRESH_TOKEN_SECRET }}
+          SECRET_ALLOWED_ORIGINS: ${{ secrets.ALLOWED_ORIGINS }}
+          SECRET_ADMIN_NAME: ${{ secrets.ADMIN_NAME }}
+          SECRET_ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          SECRET_ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          SECRET_MONGODB_URL: ${{ secrets.MONGODB_URL }}
+          SECRET_REDIS_URL: ${{ secrets.REDIS_URL }}
+          SECRET_MONGO_USER: ${{ secrets.MONGO_USER }}
+          SECRET_MONGO_PASSWORD: ${{ secrets.MONGO_PASSWORD }}
+          SECRET_REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+          SECRET_EDGE_STORE_ACCESS_KEY: ${{ secrets.EDGE_STORE_ACCESS_KEY }}
+          SECRET_EDGE_STORE_SECRET_KEY: ${{ secrets.EDGE_STORE_SECRET_KEY }}
+        run: |
           ssh -p "${VPS_PORT}" "${VPS_USER}@${VPS_HOST}" "bash -s" <<EOF
           set -euo pipefail
 
           mkdir -p ${VPS_APP_DIR}
           cd ${VPS_APP_DIR}
 
-          # Write .env file
-          cat > .env <<'ENVEOF'
-ACCESS_TOKEN_SECRET=${{ secrets.ACCESS_TOKEN_SECRET }}
-REFRESH_TOKEN_SECRET=${{ secrets.REFRESH_TOKEN_SECRET }}
-ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }}
-ADMIN_NAME=${{ secrets.ADMIN_NAME }}
-ADMIN_EMAIL=${{ secrets.ADMIN_EMAIL }}
-ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}
-MONGODB_URL=${{ secrets.MONGODB_URL }}
-REDIS_URL=${{ secrets.REDIS_URL }}
-MONGO_USER=${{ secrets.MONGO_USER }}
-MONGO_PASSWORD=${{ secrets.MONGO_PASSWORD }}
-REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
-EDGE_STORE_ACCESS_KEY=${{ secrets.EDGE_STORE_ACCESS_KEY }}
-EDGE_STORE_SECRET_KEY=${{ secrets.EDGE_STORE_SECRET_KEY }}
+          cat > .env <<ENVEOF
+ACCESS_TOKEN_SECRET=${SECRET_ACCESS_TOKEN_SECRET}
+REFRESH_TOKEN_SECRET=${SECRET_REFRESH_TOKEN_SECRET}
+ALLOWED_ORIGINS=${SECRET_ALLOWED_ORIGINS}
+ADMIN_NAME=${SECRET_ADMIN_NAME}
+ADMIN_EMAIL=${SECRET_ADMIN_EMAIL}
+ADMIN_PASSWORD=${SECRET_ADMIN_PASSWORD}
+MONGODB_URL=${SECRET_MONGODB_URL}
+REDIS_URL=${SECRET_REDIS_URL}
+MONGO_USER=${SECRET_MONGO_USER}
+MONGO_PASSWORD=${SECRET_MONGO_PASSWORD}
+REDIS_PASSWORD=${SECRET_REDIS_PASSWORD}
+EDGE_STORE_ACCESS_KEY=${SECRET_EDGE_STORE_ACCESS_KEY}
+EDGE_STORE_SECRET_KEY=${SECRET_EDGE_STORE_SECRET_KEY}
 ENVEOF
 
-          # Pull latest images and deploy
           docker compose pull
           docker compose up -d --remove-orphans
 
           echo "Container status:"
           docker compose ps
 
-          # Health check
           HEALTH_OK="false"
           for i in {1..18}; do
             if curl -fsS http://127.0.0.1/api/health >/dev/null 2>&1; then
