@@ -64,22 +64,8 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -p ${{ secrets.VPS_PORT }} -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Copy files to VPS
+      - name: Write .env file locally
         env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_PORT: ${{ secrets.VPS_PORT }}
-          VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_APP_DIR: ${{ secrets.VPS_APP_DIR }}
-        run: |
-          scp -P "${VPS_PORT}" docker-compose.yml "${VPS_USER}@${VPS_HOST}:${VPS_APP_DIR}/docker-compose.yml"
-          scp -P "${VPS_PORT}" -r nginx "${VPS_USER}@${VPS_HOST}:${VPS_APP_DIR}/"
-
-      - name: Write .env and deploy
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_PORT: ${{ secrets.VPS_PORT }}
-          VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_APP_DIR: ${{ secrets.VPS_APP_DIR }}
           SECRET_ACCESS_TOKEN_SECRET: ${{ secrets.ACCESS_TOKEN_SECRET }}
           SECRET_REFRESH_TOKEN_SECRET: ${{ secrets.REFRESH_TOKEN_SECRET }}
           SECRET_ALLOWED_ORIGINS: ${{ secrets.ALLOWED_ORIGINS }}
@@ -94,67 +80,50 @@ jobs:
           SECRET_EDGE_STORE_ACCESS_KEY: ${{ secrets.EDGE_STORE_ACCESS_KEY }}
           SECRET_EDGE_STORE_SECRET_KEY: ${{ secrets.EDGE_STORE_SECRET_KEY }}
         run: |
-          # Write .env locally first
-          cat > /tmp/app.env << ENVEOF
-          ACCESS_TOKEN_SECRET=${SECRET_ACCESS_TOKEN_SECRET}
-          REFRESH_TOKEN_SECRET=${SECRET_REFRESH_TOKEN_SECRET}
-          ALLOWED_ORIGINS=${SECRET_ALLOWED_ORIGINS}
-          ADMIN_NAME=${SECRET_ADMIN_NAME}
-          ADMIN_EMAIL=${SECRET_ADMIN_EMAIL}
-          ADMIN_PASSWORD=${SECRET_ADMIN_PASSWORD}
-          MONGODB_URL=${SECRET_MONGODB_URL}
-          REDIS_URL=${SECRET_REDIS_URL}
-          MONGO_USER=${SECRET_MONGO_USER}
-          MONGO_PASSWORD=${SECRET_MONGO_PASSWORD}
-          REDIS_PASSWORD=${SECRET_REDIS_PASSWORD}
-          EDGE_STORE_ACCESS_KEY=${SECRET_EDGE_STORE_ACCESS_KEY}
-          EDGE_STORE_SECRET_KEY=${SECRET_EDGE_STORE_SECRET_KEY}
-          ENVEOF
+          printf 'ACCESS_TOKEN_SECRET=%s\n' "${SECRET_ACCESS_TOKEN_SECRET}" >> /tmp/app.env
+          printf 'REFRESH_TOKEN_SECRET=%s\n' "${SECRET_REFRESH_TOKEN_SECRET}" >> /tmp/app.env
+          printf 'ALLOWED_ORIGINS=%s\n' "${SECRET_ALLOWED_ORIGINS}" >> /tmp/app.env
+          printf 'ADMIN_NAME=%s\n' "${SECRET_ADMIN_NAME}" >> /tmp/app.env
+          printf 'ADMIN_EMAIL=%s\n' "${SECRET_ADMIN_EMAIL}" >> /tmp/app.env
+          printf 'ADMIN_PASSWORD=%s\n' "${SECRET_ADMIN_PASSWORD}" >> /tmp/app.env
+          printf 'MONGODB_URL=%s\n' "${SECRET_MONGODB_URL}" >> /tmp/app.env
+          printf 'REDIS_URL=%s\n' "${SECRET_REDIS_URL}" >> /tmp/app.env
+          printf 'MONGO_USER=%s\n' "${SECRET_MONGO_USER}" >> /tmp/app.env
+          printf 'MONGO_PASSWORD=%s\n' "${SECRET_MONGO_PASSWORD}" >> /tmp/app.env
+          printf 'REDIS_PASSWORD=%s\n' "${SECRET_REDIS_PASSWORD}" >> /tmp/app.env
+          printf 'EDGE_STORE_ACCESS_KEY=%s\n' "${SECRET_EDGE_STORE_ACCESS_KEY}" >> /tmp/app.env
+          printf 'EDGE_STORE_SECRET_KEY=%s\n' "${SECRET_EDGE_STORE_SECRET_KEY}" >> /tmp/app.env
 
-          # Copy .env to VPS
+      - name: Copy files to VPS
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_APP_DIR: ${{ secrets.VPS_APP_DIR }}
+        run: |
+          ssh -p "${VPS_PORT}" "${VPS_USER}@${VPS_HOST}" "mkdir -p ${VPS_APP_DIR}/nginx/certs"
           scp -P "${VPS_PORT}" /tmp/app.env "${VPS_USER}@${VPS_HOST}:${VPS_APP_DIR}/.env"
+          scp -P "${VPS_PORT}" docker-compose.yml "${VPS_USER}@${VPS_HOST}:${VPS_APP_DIR}/docker-compose.yml"
+          scp -P "${VPS_PORT}" -r nginx/config "${VPS_USER}@${VPS_HOST}:${VPS_APP_DIR}/nginx/"
+          scp -P "${VPS_PORT}" nginx/Dockerfile "${VPS_USER}@${VPS_HOST}:${VPS_APP_DIR}/nginx/Dockerfile"
 
-          # Deploy
-          ssh -p "${VPS_PORT}" "${VPS_USER}@${VPS_HOST}" "cd ${VPS_APP_DIR} && docker compose pull && docker compose up -d --remove-orphans && docker compose ps"
-          
-ACCESS_TOKEN_SECRET=${SECRET_ACCESS_TOKEN_SECRET}
-REFRESH_TOKEN_SECRET=${SECRET_REFRESH_TOKEN_SECRET}
-ALLOWED_ORIGINS=${SECRET_ALLOWED_ORIGINS}
-ADMIN_NAME=${SECRET_ADMIN_NAME}
-ADMIN_EMAIL=${SECRET_ADMIN_EMAIL}
-ADMIN_PASSWORD=${SECRET_ADMIN_PASSWORD}
-MONGODB_URL=${SECRET_MONGODB_URL}
-REDIS_URL=${SECRET_REDIS_URL}
-MONGO_USER=${SECRET_MONGO_USER}
-MONGO_PASSWORD=${SECRET_MONGO_PASSWORD}
-REDIS_PASSWORD=${SECRET_REDIS_PASSWORD}
-EDGE_STORE_ACCESS_KEY=${SECRET_EDGE_STORE_ACCESS_KEY}
-EDGE_STORE_SECRET_KEY=${SECRET_EDGE_STORE_SECRET_KEY}
-ENVEOF
+      - name: Deploy on VPS
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_APP_DIR: ${{ secrets.VPS_APP_DIR }}
+        run: |
+          ssh -p "${VPS_PORT}" "${VPS_USER}@${VPS_HOST}" "cd ${VPS_APP_DIR} && docker compose pull && docker compose up -d --build --remove-orphans && docker compose ps"
 
-          docker compose pull
-          docker compose up -d --remove-orphans
-
-          echo "Container status:"
-          docker compose ps
-
-          HEALTH_OK="false"
-          for i in {1..18}; do
-            if curl -fsS http://127.0.0.1/api/health >/dev/null 2>&1; then
-              HEALTH_OK="true"
-              break
-            fi
-            sleep 5
-          done
-
-          if [[ "\${HEALTH_OK}" != "true" ]]; then
-            echo "Health check failed"
-            docker compose logs --tail=50 backend || true
-            exit 1
-          fi
-
-          echo "Deploy successful"
-          EOF
+      - name: Health check
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          sleep 30
+          ssh -p "${VPS_PORT}" "${VPS_USER}@${VPS_HOST}" "curl -fsS http://127.0.0.1/api/health || (docker compose -f /root/app/docker-compose.yml logs --tail=50 backend && exit 1)"
 
       - name: Create GitHub issue on failure
         if: failure()
