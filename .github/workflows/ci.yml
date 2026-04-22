@@ -94,13 +94,29 @@ jobs:
           SECRET_EDGE_STORE_ACCESS_KEY: ${{ secrets.EDGE_STORE_ACCESS_KEY }}
           SECRET_EDGE_STORE_SECRET_KEY: ${{ secrets.EDGE_STORE_SECRET_KEY }}
         run: |
-          ssh -p "${VPS_PORT}" "${VPS_USER}@${VPS_HOST}" "bash -s" <<EOF
-          set -euo pipefail
+          # Write .env locally first
+          cat > /tmp/app.env << ENVEOF
+          ACCESS_TOKEN_SECRET=${SECRET_ACCESS_TOKEN_SECRET}
+          REFRESH_TOKEN_SECRET=${SECRET_REFRESH_TOKEN_SECRET}
+          ALLOWED_ORIGINS=${SECRET_ALLOWED_ORIGINS}
+          ADMIN_NAME=${SECRET_ADMIN_NAME}
+          ADMIN_EMAIL=${SECRET_ADMIN_EMAIL}
+          ADMIN_PASSWORD=${SECRET_ADMIN_PASSWORD}
+          MONGODB_URL=${SECRET_MONGODB_URL}
+          REDIS_URL=${SECRET_REDIS_URL}
+          MONGO_USER=${SECRET_MONGO_USER}
+          MONGO_PASSWORD=${SECRET_MONGO_PASSWORD}
+          REDIS_PASSWORD=${SECRET_REDIS_PASSWORD}
+          EDGE_STORE_ACCESS_KEY=${SECRET_EDGE_STORE_ACCESS_KEY}
+          EDGE_STORE_SECRET_KEY=${SECRET_EDGE_STORE_SECRET_KEY}
+          ENVEOF
 
-          mkdir -p ${VPS_APP_DIR}
-          cd ${VPS_APP_DIR}
+          # Copy .env to VPS
+          scp -P "${VPS_PORT}" /tmp/app.env "${VPS_USER}@${VPS_HOST}:${VPS_APP_DIR}/.env"
 
-          cat > .env <<ENVEOF
+          # Deploy
+          ssh -p "${VPS_PORT}" "${VPS_USER}@${VPS_HOST}" "cd ${VPS_APP_DIR} && docker compose pull && docker compose up -d --remove-orphans && docker compose ps"
+          
 ACCESS_TOKEN_SECRET=${SECRET_ACCESS_TOKEN_SECRET}
 REFRESH_TOKEN_SECRET=${SECRET_REFRESH_TOKEN_SECRET}
 ALLOWED_ORIGINS=${SECRET_ALLOWED_ORIGINS}
