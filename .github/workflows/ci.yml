@@ -53,6 +53,9 @@ jobs:
     needs: build-and-push
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Add SSH key
         run: |
           mkdir -p ~/.ssh
@@ -68,6 +71,12 @@ jobs:
           VPS_USER: ${{ secrets.VPS_USER }}
           VPS_APP_DIR: ${{ secrets.VPS_APP_DIR }}
         run: |
+          # Copy docker-compose.yml to VPS
+          scp -P "${VPS_PORT}" docker-compose.yml "${VPS_USER}@${VPS_HOST}:${VPS_APP_DIR}/docker-compose.yml"
+
+          # Copy nginx folder to VPS
+          scp -P "${VPS_PORT}" -r nginx "${VPS_USER}@${VPS_HOST}:${VPS_APP_DIR}/"
+
           ssh -p "${VPS_PORT}" "${VPS_USER}@${VPS_HOST}" "bash -s" <<EOF
           set -euo pipefail
 
@@ -76,25 +85,20 @@ jobs:
 
           # Write .env file
           cat > .env <<'ENVEOF'
-          ACCESS_TOKEN_SECRET=${{ secrets.ACCESS_TOKEN_SECRET }}
-          REFRESH_TOKEN_SECRET=${{ secrets.REFRESH_TOKEN_SECRET }}
-          ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }}
-          ADMIN_NAME=${{ secrets.ADMIN_NAME }}
-          ADMIN_EMAIL=${{ secrets.ADMIN_EMAIL }}
-          ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}
-          MONGODB_URL=${{ secrets.MONGODB_URL }}
-          REDIS_URL=${{ secrets.REDIS_URL }}
-          MONGO_USER=${{ secrets.MONGO_USER }}
-          MONGO_PASSWORD=${{ secrets.MONGO_PASSWORD }}
-          REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
-          EDGE_STORE_ACCESS_KEY=${{ secrets.EDGE_STORE_ACCESS_KEY }}
-          EDGE_STORE_SECRET_KEY=${{ secrets.EDGE_STORE_SECRET_KEY }}
-          ENVEOF
-
-          # Write docker-compose.yml
-          cat > docker-compose.yml <<'COMPOSEEOF'
-          $(cat docker-compose.yml)
-          COMPOSEEOF
+ACCESS_TOKEN_SECRET=${{ secrets.ACCESS_TOKEN_SECRET }}
+REFRESH_TOKEN_SECRET=${{ secrets.REFRESH_TOKEN_SECRET }}
+ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }}
+ADMIN_NAME=${{ secrets.ADMIN_NAME }}
+ADMIN_EMAIL=${{ secrets.ADMIN_EMAIL }}
+ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}
+MONGODB_URL=${{ secrets.MONGODB_URL }}
+REDIS_URL=${{ secrets.REDIS_URL }}
+MONGO_USER=${{ secrets.MONGO_USER }}
+MONGO_PASSWORD=${{ secrets.MONGO_PASSWORD }}
+REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
+EDGE_STORE_ACCESS_KEY=${{ secrets.EDGE_STORE_ACCESS_KEY }}
+EDGE_STORE_SECRET_KEY=${{ secrets.EDGE_STORE_SECRET_KEY }}
+ENVEOF
 
           # Pull latest images and deploy
           docker compose pull
