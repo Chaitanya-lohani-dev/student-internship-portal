@@ -52,3 +52,4 @@ uploads/
 
 /nginx/certs/*.crt
 /nginx/certs/*.key
+TECHNICAL_CONTEXT.md
